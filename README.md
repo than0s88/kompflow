@@ -146,6 +146,26 @@ To stop the stack: `Ctrl+C`. To wipe the database between runs: `docker compose 
 
 ---
 
+## Not yet implemented
+
+A short, honest list of things that are present in the codebase but are **not** correctly finished. Reviewers should not assume these features are production-ready.
+
+### End-to-end encryption — incorrectly implemented
+
+I attempted to add end-to-end encryption for card content. The cryptographic primitives (PBKDF2-SHA256 + AES-GCM) are in `apps/web/src/lib/crypto.ts`, the per-board passphrase storage is in `apps/web/src/lib/board-key.ts`, and the **Encrypt card** button on the card-detail modal does run the encrypt path on save.
+
+However, **the overall encryption logic is incorrect** and does not satisfy the requirement that a database administrator cannot read card content. Specifically:
+
+- Only the card **description body** is encrypted. The card **title**, **labels**, **cover**, **due date**, **member assignments**, **column titles**, **board titles**, **workspace names**, **user names**, and **activity-log entity titles** are all stored in the database as plaintext.
+- The passphrase is derived per board, but it lives only in the originating browser's `sessionStorage`. There is no key-sharing mechanism, so a second workspace member cannot decrypt the same card — they see the locked state with no way to unlock.
+- The decrypt-on-open UX is inconsistent: opening an encrypted card in a fresh session sometimes shows the locked state without re-prompting for the passphrase.
+- Activity logs still record `entityTitle` snapshots in plaintext, leaking what action was taken on which card title even when the description is encrypted.
+- There is no "rotate passphrase", "decrypt all", or recovery flow.
+
+A reviewer reading the take-home requirement strictly ("card content should be encrypted so that even database administrators cannot read it") should treat the encryption support as **not satisfied**. Doing this correctly requires either (a) server-side at-rest encryption of all user-content columns with a key the DB admin doesn't have, or (b) true client-side E2E with per-user key pairs and workspace key sharing — both are larger pieces of work than I had time for.
+
+---
+
 ## Running tests
 
 The project ships with two test suites: Jest for the API, Vitest for the web.
