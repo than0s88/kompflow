@@ -4,7 +4,11 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import { AuthProvider } from './auth/AuthContext.tsx';
+import { initSettings } from './lib/settings';
 import './index.css';
+
+// Apply persisted settings before first paint to avoid theme flash on refresh.
+initSettings();
 
 const queryClient = new QueryClient({
   defaultOptions: {

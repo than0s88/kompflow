@@ -79,19 +79,6 @@ export class AuthController {
     this.handleOAuthCallback(req, res, 'google');
   }
 
-  @Get('microsoft')
-  @UseGuards(AuthGuard('microsoft'))
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  microsoftStart(): void {
-    // Passport handles the redirect to Microsoft.
-  }
-
-  @Get('microsoft/callback')
-  @UseGuards(AuthGuard('microsoft'))
-  microsoftCallback(@Req() req: Request, @Res() res: Response): void {
-    this.handleOAuthCallback(req, res, 'microsoft');
-  }
-
   private handleOAuthCallback(
     req: Request,
     res: Response,

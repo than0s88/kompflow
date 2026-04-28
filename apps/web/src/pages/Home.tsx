@@ -39,43 +39,50 @@ const ACCENTS: readonly Accent[] = [
 
 const FAQS: ReadonlyArray<readonly [string, string]> = [
   [
-    'Is there really a free plan?',
-    "Yes — free for up to 10 users, with unlimited boards and cards. We don't expire it or hide features behind a popup.",
+    'Is this a real product?',
+    'No — Kompflow is a take-home challenge build. The kanban board, real-time sync, and end-to-end encryption are real and working; the marketing-page social proof on this landing is illustrative only.',
   ],
   [
-    'How is Kompflow different from Trello or Linear?',
-    "We sit between them. You get the visual simplicity of a kanban board with grown-up features: end-to-end encryption, a real API, and an interface that doesn't feel like 2014.",
+    'How does the encryption work?',
+    'Card content is encrypted in your browser with AES-GCM, using a key derived from a per-board passphrase via PBKDF2 (200k iterations). The server stores ciphertext only — it never sees your passphrase or plaintext.',
   ],
   [
-    'Can I import from another tool?',
-    'Yes. We support CSV, Trello JSON exports, Asana, and a generic JSON format documented in our API.',
+    'Does real-time collaboration actually work?',
+    'Yes. Card moves and edits broadcast over Pusher channels, so multiple browsers on the same board stay in sync without refresh.',
   ],
   [
-    'Where is my data stored?',
-    "In AWS regions you choose: US, EU, or APAC. With Pro and above, card content is encrypted with keys we can't access.",
+    'What features are intentionally not built?',
+    "Billing/pricing, mobile apps, multi-region storage, SSO, and a public REST API are out of scope for this build. The pricing section is omitted on purpose — there's no payment system to back it up.",
   ],
   [
-    'Do you have a mobile app?',
-    'The web app is fully responsive. Native iOS and Android are in beta — drop us your email in the footer to join.',
-  ],
-  [
-    'What happens if I cancel?',
-    "You keep read-only access forever. Export your data anytime as JSON or CSV. We don't hold your work hostage.",
+    'Can I poke at the code?',
+    "Sure — it's a pnpm monorepo: a NestJS + Prisma API and a React + Vite web app. The Tweaks panel (gear button, dev mode only) lets you swap theme, accent, and the hero headline live.",
   ],
 ];
 
 const HEADLINE_REGEX = /\b(actually|finally|never|just)\b/i;
 
-function renderHeadlineHtml(value: string): string {
-  return value.replace(HEADLINE_REGEX, '<em>$1</em>');
+function HeadlineText({ value }: { value: string }) {
+  const match = value.match(HEADLINE_REGEX);
+  if (!match || match.index === undefined) return <>{value}</>;
+  const before = value.slice(0, match.index);
+  const word = match[0];
+  const after = value.slice(match.index + word.length);
+  return (
+    <>
+      {before}
+      <em>{word}</em>
+      {after}
+    </>
+  );
 }
 
 export default function Home() {
   const { user } = useAuth();
   const ctaTarget = user ? '/dashboard' : '/register';
-  const signInTarget = user ? '/dashboard' : '/login';
   const ctaLabel = user ? 'Open dashboard' : 'Try free';
-  const signInLabel = user ? 'Dashboard' : 'Sign in';
+
+  const isDev = import.meta.env.DEV;
 
   const [tweaksOpen, setTweaksOpen] = useState<boolean>(false);
   const [theme, setTheme] = useState<ThemeMode>('light');
@@ -84,7 +91,7 @@ export default function Home() {
   const [headline, setHeadline] = useState<string>(
     'The kanban your team will actually use.'
   );
-  const [openFaqIdx, setOpenFaqIdx] = useState<number>(0);
+  const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(0);
 
   const animEnabledRef = useRef<boolean>(true);
   const boardRef = useRef<HTMLDivElement | null>(null);
@@ -319,19 +326,20 @@ export default function Home() {
       {/* ============= NAV ============= */}
       <header className="nav">
         <div className="container nav-inner">
-          <a href="#" className="logo">
-            <div className="logo-mark">B</div>
+          <Link to="/" className="logo">
+            <div className="logo-mark">K</div>
             Kompflow
-          </a>
+          </Link>
           <nav className="nav-links">
             <a href="#features">Features</a>
             <a href="#showcase">Product</a>
-            <a href="#pricing">Pricing</a>
             <a href="#faq">FAQ</a>
           </nav>
           <div className="nav-spacer"></div>
           <div className="nav-cta">
-            <Link to={signInTarget} className="btn btn-ghost">{signInLabel}</Link>
+            {!user && (
+              <Link to="/login" className="btn btn-ghost">Sign in</Link>
+            )}
             <Link to={ctaTarget} className="btn btn-primary">{ctaLabel}</Link>
           </div>
         </div>
@@ -341,42 +349,31 @@ export default function Home() {
       <section className="hero">
         <div className="container hero-grid">
           <div className="hero-text">
-            <div className="eyebrow"><span className="eyebrow-dot"></span> New · Real-time collaboration</div>
-            <h1
-              className="hero-title"
-              id="headline"
-              dangerouslySetInnerHTML={{ __html: renderHeadlineHtml(headline) }}
-            />
-            <p className="hero-sub">Kompflow is a beautifully simple project board with real-time sync, end-to-end encrypted cards, and the kind of micro-interactions that make work feel less like work.</p>
+            <div className="eyebrow"><span className="eyebrow-dot"></span> Real-time · End-to-end encrypted</div>
+            <h1 className="hero-title" id="headline">
+              <HeadlineText value={headline} />
+            </h1>
+            <p className="hero-sub">A kanban board with live multi-cursor sync over Pusher and per-board AES-GCM encryption that runs in your browser.</p>
             <div className="hero-cta">
               <Link to={ctaTarget} className="btn btn-primary btn-lg">
-                Start free
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                Try the demo
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
               </Link>
               <a href="#showcase" className="btn btn-outline btn-lg">See it in action</a>
             </div>
             <div className="hero-meta">
               <span className="hero-meta-dot"></span>
-              Free for up to 10 users · No credit card required
+              No sign-up required to browse · Source on request
             </div>
           </div>
-          <div className="demo-board" id="demo" ref={boardRef}>
-            {/* populated by effect */}
-          </div>
-        </div>
-      </section>
-
-      {/* ============= LOGOS ============= */}
-      <section className="logos">
-        <div className="container">
-          <div className="logos-label">Trusted by teams at companies that ship</div>
-          <div className="logos-row">
-            <div className="logo-item"><span className="glyph">N</span> Northwind</div>
-            <div className="logo-item"><span className="glyph">A</span> Acme Co</div>
-            <div className="logo-item"><span className="glyph">G</span> Globex</div>
-            <div className="logo-item"><span className="glyph">S</span> Soylent</div>
-            <div className="logo-item"><span className="glyph">H</span> Hooli</div>
-            <div className="logo-item"><span className="glyph">P</span> Pied Piper</div>
+          <div
+            className="demo-board"
+            id="demo"
+            ref={boardRef}
+            role="img"
+            aria-label="Animated illustration of a kanban board with cards moving between lanes"
+          >
+            {/* populated by effect — decorative */}
           </div>
         </div>
       </section>
@@ -385,42 +382,39 @@ export default function Home() {
       <section className="section" id="features">
         <div className="container">
           <div className="section-header reveal">
-            <div className="section-eyebrow">Features</div>
-            <h2 className="section-title">Everything you'd expect.<br />Nothing you wouldn't.</h2>
-            <p className="section-sub">A board, lanes, cards, drag and drop. Plus the small stuff that makes a difference at 4pm on a Friday.</p>
+            <div className="section-eyebrow">What's actually built</div>
+            <h2 className="section-title">The parts that work.<br />Nothing that doesn't.</h2>
+            <p className="section-sub">Lanes, cards, drag-and-drop, live sync between browsers, and per-board encryption. That's the build.</p>
           </div>
           <div className="features">
 
             {/* Featured: real-time */}
             <div className="feature featured reveal">
               <div className="feature-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 2a10 10 0 0110 10M12 22a10 10 0 01-10-10M22 12a10 10 0 01-10 10M2 12A10 10 0 0112 2"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2a10 10 0 0110 10M12 22a10 10 0 01-10-10M22 12a10 10 0 01-10 10M2 12A10 10 0 0112 2"/></svg>
               </div>
               <div className="feature-eyebrow">Live sync</div>
-              <h3 className="feature-title">See teammates move cards in real time</h3>
-              <p className="feature-desc">Live cursors, presence avatars, and instant updates. No refresh, no merge conflicts — just watch the board update as your team works.</p>
-              <div className="feature-mini-art" style={{ background: 'rgba(255,255,255,0.12)', justifyContent: 'flex-start', gap: 10 }}>
-                <div style={{ display: 'flex', gap: '-6px' }}>
+              <h3 className="feature-title">Cards update across every open tab</h3>
+              <p className="feature-desc">Card creates, moves, and edits broadcast over Pusher channels scoped to each board. Open the same board in two browsers — they stay in lockstep without refresh.</p>
+              <div className="feature-mini-art" aria-hidden="true" style={{ background: 'rgba(255,255,255,0.12)', justifyContent: 'flex-start', gap: 10 }}>
+                <div style={{ display: 'flex' }}>
                   <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#F68B2E', border: '2px solid white', marginRight: -6 }}></div>
                   <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#C377E0', border: '2px solid white', marginRight: -6 }}></div>
                   <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#0079BF', border: '2px solid white' }}></div>
                 </div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>3 teammates online</div>
-                <div style={{ marginLeft: 'auto', fontSize: 10, color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#51E898' }}></span> connected
-                </div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>Example presence indicator</div>
               </div>
             </div>
 
             {/* Drag & drop */}
             <div className="feature reveal">
               <div className="feature-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
               </div>
               <div className="feature-eyebrow">Drag & drop</div>
               <h3 className="feature-title">Movement that feels right</h3>
               <p className="feature-desc">Springy, weighted animations on every drop. The card lands where you let go.</p>
-              <div className="feature-mini-art">
+              <div className="feature-mini-art" aria-hidden="true">
                 <div className="mini-card"></div>
                 <div className="mini-card" style={{ opacity: 0.5 }}></div>
                 <div className="mini-card" style={{ opacity: 0.3 }}></div>
@@ -430,25 +424,25 @@ export default function Home() {
             {/* Encryption */}
             <div className="feature reveal">
               <div className="feature-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
               </div>
-              <div className="feature-eyebrow">End-to-end encryption</div>
-              <h3 className="feature-title">Cards only your team can read</h3>
-              <p className="feature-desc">Encrypted at rest and in transit. We can't see your cards. Neither can anyone else.</p>
-              <div className="feature-mini-art" style={{ fontFamily: 'ui-monospace, monospace', fontSize: 10, color: 'var(--fg-3)', justifyContent: 'center' }}>
-                a3f1·9c2e·b817·4d05
+              <div className="feature-eyebrow">Per-board encryption</div>
+              <h3 className="feature-title">Card content encrypted in your browser</h3>
+              <p className="feature-desc">AES-GCM encryption with a key derived from a per-board passphrase via PBKDF2 (200k iterations). The server only stores ciphertext.</p>
+              <div className="feature-mini-art" aria-hidden="true" style={{ fontFamily: 'ui-monospace, monospace', fontSize: 10, color: 'var(--fg-3)', justifyContent: 'center' }}>
+                AES-GCM · PBKDF2-SHA256
               </div>
             </div>
 
             {/* Markdown */}
             <div className="feature reveal">
               <div className="feature-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg>
               </div>
               <div className="feature-eyebrow">Rich cards</div>
               <h3 className="feature-title">Markdown that looks like Markdown</h3>
-              <p className="feature-desc">Headings, lists, links, code, images, checkboxes. Write fast, render gracefully.</p>
-              <div className="feature-mini-art" style={{ flexDirection: 'column', gap: 4, alignItems: 'flex-start', padding: '8px 12px' }}>
+              <p className="feature-desc">Headings, lists, links, code, checkboxes. Write fast, render gracefully.</p>
+              <div className="feature-mini-art" aria-hidden="true" style={{ flexDirection: 'column', gap: 4, alignItems: 'flex-start', padding: '8px 12px' }}>
                 <div style={{ height: 6, width: '60%', background: 'var(--ink)', borderRadius: 2 }}></div>
                 <div style={{ height: 4, width: '80%', background: 'var(--fg-3)', borderRadius: 2, opacity: 0.5 }}></div>
                 <div style={{ height: 4, width: '70%', background: 'var(--fg-3)', borderRadius: 2, opacity: 0.5 }}></div>
@@ -458,54 +452,17 @@ export default function Home() {
             {/* Dark mode */}
             <div className="feature reveal">
               <div className="feature-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
               </div>
               <div className="feature-eyebrow">Settings</div>
-              <h3 className="feature-title">Dark mode, density, motion</h3>
-              <p className="feature-desc">Match your environment. Compact for power users, cozy for fresh eyes.</p>
-              <div className="feature-mini-art" style={{ background: 'linear-gradient(90deg, white 50%, #14130F 50%)', padding: 0 }}>
+              <h3 className="feature-title">Light, dark, and accent colors</h3>
+              <p className="feature-desc">Match your environment. Five accent colors, light and dark themes — try them via the gear icon.</p>
+              <div className="feature-mini-art" aria-hidden="true" style={{ background: 'linear-gradient(90deg, white 50%, #14130F 50%)', padding: 0 }}>
                 <div style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#1C1A16' }}>Light</div>
                 <div style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#F4F1E8' }}>Dark</div>
               </div>
             </div>
 
-            {/* API */}
-            <div className="feature reveal">
-              <div className="feature-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-              </div>
-              <div className="feature-eyebrow">Developer API</div>
-              <h3 className="feature-title">Full REST API + OpenAPI schema</h3>
-              <p className="feature-desc">Wire Kompflow into your stack. Webhooks, CRUD, JSON exports.</p>
-              <div className="feature-mini-art" style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: 'var(--accent)', justifyContent: 'flex-start' }}>
-                GET&nbsp;<span style={{ color: 'var(--fg-2)' }}>/api/boards/:id</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ============= STATS ============= */}
-      <section>
-        <div className="container">
-          <div className="stats reveal">
-            <div className="stat">
-              <div className="stat-num"><span>40k+</span></div>
-              <div className="stat-label">Teams using Kompflow</div>
-            </div>
-            <div className="stat">
-              <div className="stat-num"><span>2M+</span></div>
-              <div className="stat-label">Cards moved this week</div>
-            </div>
-            <div className="stat">
-              <div className="stat-num"><span>99.99%</span></div>
-              <div className="stat-label">Uptime, last 12 months</div>
-            </div>
-            <div className="stat">
-              <div className="stat-num"><span>4.9</span></div>
-              <div className="stat-label">★ on Product Hunt</div>
-            </div>
           </div>
         </div>
       </section>
@@ -515,13 +472,13 @@ export default function Home() {
         <div className="container">
           <div className="section-header reveal">
             <div className="section-eyebrow">A closer look</div>
-            <h2 className="section-title">Made for the work,<br />not the meeting about the work.</h2>
-            <p className="section-sub">A real board with real cards, real labels, and a real screenshot — not a stylized illustration.</p>
+            <h2 className="section-title">An example board.</h2>
+            <p className="section-sub">A stylized illustration of the board view — log in to interact with the real one.</p>
           </div>
           <div className="showcase-frame reveal">
             <div className="showcase-bar">
               <span className="dot r"></span><span className="dot y"></span><span className="dot g"></span>
-              <span className="showcase-url">app.boardflow.com/b/q3-launch</span>
+              <span className="showcase-url">app.kompflow.local/b/q3-launch</span>
             </div>
             <div className="showcase-board">
               <div className="showcase-lane">
@@ -606,108 +563,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============= TESTIMONIALS ============= */}
-      <section className="section">
-        <div className="container">
-          <div className="section-header reveal">
-            <div className="section-eyebrow">Why teams switch</div>
-            <h2 className="section-title">Loved by people who hate project management tools.</h2>
-          </div>
-          <div className="testimonials">
-            <div className="testimonial reveal">
-              <p className="testimonial-quote">We replaced three tools with one. The team noticed within a week — fewer meetings, fewer dropped balls.</p>
-              <div className="testimonial-meta">
-                <div className="testimonial-avatar" style={{ background: '#0E7C47' }}>RA</div>
-                <div>
-                  <div className="testimonial-name">Rosa Alvarez</div>
-                  <div className="testimonial-role">Head of Product, Northwind</div>
-                </div>
-              </div>
-            </div>
-            <div className="testimonial reveal">
-              <p className="testimonial-quote">The encryption story is what got us through legal. The drag-and-drop feel is what got the team on board.</p>
-              <div className="testimonial-meta">
-                <div className="testimonial-avatar" style={{ background: '#8E1C24' }}>JH</div>
-                <div>
-                  <div className="testimonial-name">Jamal Henderson</div>
-                  <div className="testimonial-role">CTO, Soylent Health</div>
-                </div>
-              </div>
-            </div>
-            <div className="testimonial reveal">
-              <p className="testimonial-quote">It feels like Trello if Trello had been redesigned in 2026 and someone actually used it before shipping.</p>
-              <div className="testimonial-meta">
-                <div className="testimonial-avatar" style={{ background: '#F68B2E' }}>PT</div>
-                <div>
-                  <div className="testimonial-name">Priya Tandon</div>
-                  <div className="testimonial-role">Engineering Manager, Pied Piper</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============= PRICING ============= */}
-      <section className="section" id="pricing">
-        <div className="container">
-          <div className="section-header reveal">
-            <div className="section-eyebrow">Pricing</div>
-            <h2 className="section-title">Simple plans.<br />Fair prices.</h2>
-            <p className="section-sub">Start free. Upgrade when your team outgrows it. Cancel anytime, no calls.</p>
-          </div>
-          <div className="pricing">
-            <div className="price-card reveal">
-              <div className="price-name">Free</div>
-              <div className="price-amount"><span className="currency">$</span>0<span className="per"> /forever</span></div>
-              <div className="price-desc">For solo work and small teams getting started.</div>
-              <ul className="price-features">
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Up to 10 users</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Unlimited boards & cards</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Real-time sync</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Markdown cards</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Dark mode</li>
-              </ul>
-              <div className="price-cta">
-                <Link to={ctaTarget} className="btn btn-outline">{user ? 'Open dashboard' : 'Start free'}</Link>
-              </div>
-            </div>
-
-            <div className="price-card featured reveal">
-              <div className="price-name">Pro</div>
-              <div className="price-amount"><span className="currency">$</span>9<span className="per"> /user/mo</span></div>
-              <div className="price-desc">For teams that want the polish, not the friction.</div>
-              <ul className="price-features">
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Everything in Free</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Unlimited users</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> End-to-end encryption</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> REST API & webhooks</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Priority support</li>
-              </ul>
-              <div className="price-cta">
-                <Link to={ctaTarget} className="btn btn-primary">{user ? 'Open dashboard' : 'Try Pro free for 14 days'}</Link>
-              </div>
-            </div>
-
-            <div className="price-card reveal">
-              <div className="price-name">Enterprise</div>
-              <div className="price-amount" style={{ fontSize: 36, paddingTop: 6 }}>Let's talk</div>
-              <div className="price-desc">For larger organizations with security & compliance needs.</div>
-              <ul className="price-features">
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Everything in Pro</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> SSO + SCIM</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> SOC 2 Type II</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Dedicated CSM</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Custom contracts</li>
-              </ul>
-              <div className="price-cta">
-                <a href="mailto:sales@kompflow.com" className="btn btn-outline">Contact sales</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ============= FAQ ============= */}
       <section className="section" id="faq" style={{ paddingTop: 40 }}>
         <div className="container">
@@ -723,10 +578,11 @@ export default function Home() {
                   <button
                     className="faq-q"
                     type="button"
-                    onClick={() => setOpenFaqIdx(isOpen ? -1 : i)}
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenFaqIdx(isOpen ? null : i)}
                   >
                     {q}
-                    <svg className="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="6 9 12 15 18 9"/></svg>
+                    <svg className="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
                   </button>
                   <div className="faq-a">{a}</div>
                 </div>
@@ -741,13 +597,13 @@ export default function Home() {
         <div className="final-cta reveal">
           <div className="final-cta-inner">
             <h2 className="final-cta-title">Ready to move some cards?</h2>
-            <p className="final-cta-sub">Free for up to 10 users. No credit card. No sales call. Just sign up.</p>
+            <p className="final-cta-sub">Sign up takes a few seconds. Open two tabs to watch live sync work.</p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
               <Link to={ctaTarget} className="btn btn-primary btn-lg">
-                Start free
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                {user ? 'Open dashboard' : 'Try free'}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
               </Link>
-              <a href="#showcase" className="btn btn-ghost btn-lg">Watch the demo</a>
+              <a href="#showcase" className="btn btn-ghost btn-lg">See the example board</a>
             </div>
           </div>
         </div>
@@ -756,129 +612,102 @@ export default function Home() {
       {/* ============= FOOTER ============= */}
       <footer className="footer">
         <div className="container">
-          <div className="footer-grid">
-            <div className="footer-brand">
-              <a href="#" className="logo">
-                <div className="logo-mark">B</div>
-                Kompflow
-              </a>
-              <p className="footer-tagline">A beautifully simple kanban board for teams that ship. Made with care since 2024.</p>
-            </div>
-            <div className="footer-col">
-              <div className="footer-col-title">Product</div>
-              <ul>
-                <li><a href="#features">Features</a></li>
-                <li><a href="#pricing">Pricing</a></li>
-                <li><a href="#showcase">Changelog</a></li>
-                <li><a href="#">API docs</a></li>
-              </ul>
-            </div>
-            <div className="footer-col">
-              <div className="footer-col-title">Company</div>
-              <ul>
-                <li><a href="#">About</a></li>
-                <li><a href="#">Careers</a></li>
-                <li><a href="#">Blog</a></li>
-                <li><a href="#">Contact</a></li>
-              </ul>
-            </div>
-            <div className="footer-col">
-              <div className="footer-col-title">Legal</div>
-              <ul>
-                <li><a href="#">Privacy</a></li>
-                <li><a href="#">Terms</a></li>
-                <li><a href="#">Security</a></li>
-                <li><a href="#">DPA</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            <span>© 2026 Kompflow, Inc. Made in San Francisco.</span>
-            <div className="footer-socials">
-              <a href="#" aria-label="Twitter"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22 5.8c-.7.3-1.5.5-2.4.6.9-.5 1.5-1.4 1.8-2.4-.8.5-1.7.8-2.7 1-.8-.8-1.9-1.4-3.1-1.4-2.4 0-4.3 1.9-4.3 4.3 0 .3 0 .7.1 1C7.7 8.7 4.6 7 2.5 4.5c-.4.6-.6 1.4-.6 2.2 0 1.5.8 2.8 1.9 3.6-.7 0-1.4-.2-2-.5v.1c0 2.1 1.5 3.8 3.5 4.2-.4.1-.7.2-1.1.2-.3 0-.5 0-.8-.1.5 1.7 2.1 3 4 3-1.5 1.1-3.3 1.8-5.3 1.8H2c1.9 1.2 4.1 1.9 6.5 1.9 7.8 0 12-6.5 12-12.1v-.6c.8-.6 1.5-1.4 2.1-2.3z"/></svg></a>
-              <a href="#" aria-label="GitHub"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.6.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 3 .8.1-.7.4-1.1.6-1.4-2.2-.3-4.5-1.1-4.5-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1 .8-.2 1.6-.3 2.5-.3.8 0 1.7.1 2.5.3 1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.5 5 .4.3.7.9.7 1.8v2.6c0 .3.2.6.7.5C19.1 20.5 22 16.7 22 12.2 22 6.6 17.5 2 12 2z"/></svg></a>
-              <a href="#" aria-label="LinkedIn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM8.3 18H5.7V9.7h2.6V18zM7 8.5c-.8 0-1.5-.7-1.5-1.5S6.2 5.5 7 5.5s1.5.7 1.5 1.5S7.8 8.5 7 8.5zM18.3 18h-2.6v-4c0-1 0-2.3-1.4-2.3s-1.6 1.1-1.6 2.2V18h-2.6V9.7h2.5v1.1h.1c.4-.7 1.2-1.3 2.5-1.3 2.7 0 3.2 1.7 3.2 4V18z"/></svg></a>
-            </div>
+          <div className="footer-bottom" style={{ paddingTop: 24 }}>
+            <Link to="/" className="logo">
+              <div className="logo-mark">K</div>
+              Kompflow
+            </Link>
+            <span style={{ color: 'var(--fg-3)', fontSize: 13 }}>
+              A kanban take-home challenge. © {new Date().getFullYear()}.
+            </span>
           </div>
         </div>
       </footer>
 
-      {/* ============= TWEAKS ============= */}
-      <button
-        className="tweaks-fab"
-        id="tweaks-toggle"
-        aria-label="Tweaks"
-        type="button"
-        onClick={() => setTweaksOpen((v) => !v)}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8v.1a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
-      </button>
-      <div className="tweaks-panel" id="tweaks-panel" style={{ display: tweaksOpen ? 'block' : 'none' }}>
-        <div className="tweaks-title">
-          Tweaks
+      {/* ============= TWEAKS (DEV ONLY) ============= */}
+      {isDev && (
+        <>
           <button
+            className="tweaks-fab"
+            id="tweaks-toggle"
+            aria-label="Tweaks (dev only)"
             type="button"
-            onClick={() => setTweaksOpen(false)}
-            style={{ color: 'var(--fg-3)', fontSize: 18 }}
-          >×</button>
-        </div>
-        <div className="tweaks-section">
-          <div className="tweaks-row">
-            <span className="tweaks-label">Theme</span>
-            <div className="tweaks-segment" id="theme-seg">
-              <button
-                type="button"
-                className={theme === 'light' ? 'active' : ''}
-                onClick={() => setTheme('light')}
-              >Light</button>
-              <button
-                type="button"
-                className={theme === 'dark' ? 'active' : ''}
-                onClick={() => setTheme('dark')}
-              >Dark</button>
-            </div>
-          </div>
-          <div className="tweaks-row">
-            <span className="tweaks-label">Accent</span>
-            <div className="tweaks-swatches" id="accent-swatches">
-              {ACCENTS.map((a, i) => (
+            onClick={() => setTweaksOpen((v) => !v)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8v.1a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+          </button>
+          {tweaksOpen && (
+            <div className="tweaks-panel" id="tweaks-panel" role="dialog" aria-label="Tweaks">
+              <div className="tweaks-title">
+                Tweaks
                 <button
-                  key={a.id}
                   type="button"
-                  className={`tweaks-swatch${i === accentIdx ? ' active' : ''}`}
-                  style={{ background: a.v }}
-                  title={a.id}
-                  onClick={() => setAccentIdx(i)}
+                  aria-label="Close tweaks"
+                  onClick={() => setTweaksOpen(false)}
+                  style={{ color: 'var(--fg-3)', fontSize: 18 }}
+                >×</button>
+              </div>
+              <div className="tweaks-section">
+                <div className="tweaks-row">
+                  <span className="tweaks-label">Theme</span>
+                  <div className="tweaks-segment" id="theme-seg">
+                    <button
+                      type="button"
+                      className={theme === 'light' ? 'active' : ''}
+                      onClick={() => setTheme('light')}
+                    >Light</button>
+                    <button
+                      type="button"
+                      className={theme === 'dark' ? 'active' : ''}
+                      onClick={() => setTheme('dark')}
+                    >Dark</button>
+                  </div>
+                </div>
+                <div className="tweaks-row">
+                  <span className="tweaks-label">Accent</span>
+                  <div className="tweaks-swatches" id="accent-swatches">
+                    {ACCENTS.map((a, i) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        className={`tweaks-swatch${i === accentIdx ? ' active' : ''}`}
+                        style={{ background: a.v }}
+                        title={a.id}
+                        aria-label={`Accent ${a.id}`}
+                        onClick={() => setAccentIdx(i)}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="tweaks-row">
+                  <span className="tweaks-label">Animated demo</span>
+                  <div className="tweaks-segment" id="anim-seg">
+                    <button
+                      type="button"
+                      className={animEnabled ? 'active' : ''}
+                      onClick={() => setAnimEnabled(true)}
+                    >On</button>
+                    <button
+                      type="button"
+                      className={!animEnabled ? 'active' : ''}
+                      onClick={() => setAnimEnabled(false)}
+                    >Off</button>
+                  </div>
+                </div>
+              </div>
+              <div className="tweaks-section">
+                <label className="tweaks-label" htmlFor="headline-input" style={{ marginBottom: 6, display: 'block' }}>Headline</label>
+                <input
+                  id="headline-input"
+                  className="tweaks-input"
+                  value={headline}
+                  onChange={(e) => setHeadline(e.target.value)}
                 />
-              ))}
+              </div>
             </div>
-          </div>
-          <div className="tweaks-row">
-            <span className="tweaks-label">Animated demo</span>
-            <div className="tweaks-segment" id="anim-seg">
-              <button
-                type="button"
-                className={animEnabled ? 'active' : ''}
-                onClick={() => setAnimEnabled(true)}
-              >On</button>
-              <button
-                type="button"
-                className={!animEnabled ? 'active' : ''}
-                onClick={() => setAnimEnabled(false)}
-              >Off</button>
-            </div>
-          </div>
-        </div>
-        <div className="tweaks-section">
-          <div className="tweaks-label" style={{ marginBottom: 6 }}>Headline</div>
-          <input
-            className="tweaks-input"
-            id="headline-input"
-            value={headline}
-            onChange={(e) => setHeadline(e.target.value)}
-          />
-        </div>
-      </div>
+          )}
+        </>
+      )}
     </>
   );
 }

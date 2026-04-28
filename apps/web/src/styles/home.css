@@ -184,7 +184,8 @@ h1, h2, h3 { margin: 0; }
   gap: 10px;
   position: relative;
   overflow: hidden;
-  min-height: 380px;
+  /* Fixed height so card-move animations don't reflow the section */
+  height: 480px;
 }
 .demo-lane {
   flex: 1;
@@ -195,6 +196,7 @@ h1, h2, h3 { margin: 0; }
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  overflow: hidden;
 }
 [data-theme="dark"] .demo-lane { background: color-mix(in srgb, white 5%, var(--surface)); }
 

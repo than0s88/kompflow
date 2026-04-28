@@ -7,15 +7,20 @@ export function getPusher(): Pusher {
   if (pusher) return pusher;
 
   const key = import.meta.env.VITE_PUSHER_KEY as string | undefined;
-  const cluster = import.meta.env.VITE_PUSHER_CLUSTER as string | undefined;
+  const cluster = (import.meta.env.VITE_PUSHER_CLUSTER as string | undefined) ?? 'mt1';
+  const host = import.meta.env.VITE_PUSHER_HOST as string | undefined;
+  const portRaw = import.meta.env.VITE_PUSHER_PORT as string | undefined;
+  const useTLSRaw = import.meta.env.VITE_PUSHER_USE_TLS as string | undefined;
+  const forceTLS = useTLSRaw !== 'false';
 
-  if (!key || !cluster) {
-    throw new Error('Pusher key/cluster missing — check VITE_PUSHER_KEY and VITE_PUSHER_CLUSTER');
+  if (!key) {
+    throw new Error('Pusher key missing — set VITE_PUSHER_KEY');
   }
 
-  pusher = new Pusher(key, {
+  type PusherOptions = ConstructorParameters<typeof Pusher>[1];
+  const options: PusherOptions = {
     cluster,
-    forceTLS: true,
+    forceTLS,
     channelAuthorization: {
       transport: 'ajax',
       endpoint: '/api/pusher/auth',
@@ -31,7 +36,16 @@ export function getPusher(): Pusher {
         }
       },
     },
-  });
+  };
 
+  if (host) {
+    const port = portRaw ? Number(portRaw) : forceTLS ? 443 : 80;
+    options.wsHost = host;
+    options.wsPort = port;
+    options.wssPort = port;
+    options.enabledTransports = ['ws', 'wss'];
+  }
+
+  pusher = new Pusher(key, options);
   return pusher;
 }

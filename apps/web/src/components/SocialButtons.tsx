@@ -2,8 +2,8 @@ import '../styles/app.css';
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
-function start(provider: 'google' | 'microsoft') {
-  window.location.href = `${API_URL}/api/auth/${provider}`;
+function startGoogle() {
+  window.location.href = `${API_URL}/api/auth/google`;
 }
 
 export default function SocialButtons() {
@@ -11,7 +11,7 @@ export default function SocialButtons() {
     <div className="auth-social">
       <button
         type="button"
-        onClick={() => start('google')}
+        onClick={startGoogle}
         className="btn-secondary"
       >
         <svg viewBox="0 0 48 48" aria-hidden="true">
@@ -21,19 +21,6 @@ export default function SocialButtons() {
           <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-4 5.6l6.3 5.2C42 35 44 30 44 24c0-1.2-.1-2.4-.4-3.5z" />
         </svg>
         Continue with Google
-      </button>
-      <button
-        type="button"
-        onClick={() => start('microsoft')}
-        className="btn-secondary"
-      >
-        <svg viewBox="0 0 23 23" aria-hidden="true">
-          <rect x="1" y="1" width="10" height="10" fill="#F25022" />
-          <rect x="12" y="1" width="10" height="10" fill="#7FBA00" />
-          <rect x="1" y="12" width="10" height="10" fill="#00A4EF" />
-          <rect x="12" y="12" width="10" height="10" fill="#FFB900" />
-        </svg>
-        Continue with Microsoft
       </button>
     </div>
   );

@@ -12,15 +12,35 @@ export class PusherService {
     const appId = config.get<string>('PUSHER_APP_ID');
     const key = config.get<string>('PUSHER_KEY');
     const secret = config.get<string>('PUSHER_SECRET');
-    const cluster = config.get<string>('PUSHER_CLUSTER');
+    const cluster = config.get<string>('PUSHER_CLUSTER') ?? 'mt1';
+    const host = config.get<string>('PUSHER_HOST');
+    const portRaw = config.get<string>('PUSHER_PORT');
+    const useTLS = (config.get<string>('PUSHER_USE_TLS') ?? 'true') !== 'false';
 
-    if (!appId || !key || !secret || !cluster) {
+    if (!appId || !key || !secret) {
       this.logger.warn('Pusher credentials missing — broadcasting disabled');
       this.pusher = null;
       return;
     }
 
-    this.pusher = new Pusher({ appId, key, secret, cluster, useTLS: true });
+    const options: Record<string, unknown> = {
+      appId,
+      key,
+      secret,
+      cluster,
+      useTLS,
+    };
+    if (host) {
+      options.host = host;
+      options.port = portRaw ? Number(portRaw) : useTLS ? 443 : 80;
+    }
+
+    this.pusher = new Pusher(
+      options as unknown as ConstructorParameters<typeof Pusher>[0],
+    );
+    this.logger.log(
+      `Pusher broadcaster ready — host=${host ?? 'cloud'} cluster=${cluster} useTLS=${useTLS}`,
+    );
   }
 
   async broadcastBoardUpdated(
@@ -46,8 +66,6 @@ export class PusherService {
     userId: string,
   ): { auth: string } | null {
     if (!this.pusher) return null;
-    return this.pusher.authorizeChannel(socketId, channel, {
-      user_id: userId,
-    });
+    return this.pusher.authorizeChannel(socketId, channel, { user_id: userId });
   }
 }

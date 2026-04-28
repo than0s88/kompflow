@@ -16,12 +16,6 @@ interface GoogleUserPayload {
   avatarUrl?: string;
 }
 
-interface MicrosoftUserPayload {
-  microsoftId: string;
-  email: string;
-  name: string;
-}
-
 const PUBLIC_USER_SELECT = {
   id: true,
   name: true,
@@ -109,36 +103,6 @@ export class AuthService {
         name: payload.name,
         googleId: payload.googleId,
         avatarUrl: payload.avatarUrl,
-      },
-      select: PUBLIC_USER_SELECT,
-    });
-    return user;
-  }
-
-  async findOrCreateMicrosoftUser(payload: MicrosoftUserPayload) {
-    let user = await this.prisma.user.findUnique({
-      where: { microsoftId: payload.microsoftId },
-      select: PUBLIC_USER_SELECT,
-    });
-    if (user) return user;
-
-    const byEmail = await this.prisma.user.findUnique({
-      where: { email: payload.email },
-    });
-    if (byEmail) {
-      user = await this.prisma.user.update({
-        where: { id: byEmail.id },
-        data: { microsoftId: payload.microsoftId },
-        select: PUBLIC_USER_SELECT,
-      });
-      return user;
-    }
-
-    user = await this.prisma.user.create({
-      data: {
-        email: payload.email,
-        name: payload.name,
-        microsoftId: payload.microsoftId,
       },
       select: PUBLIC_USER_SELECT,
     });

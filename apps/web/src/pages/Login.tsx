@@ -43,10 +43,28 @@ export default function Login() {
   return (
     <div className="auth-shell">
       <div className="auth-card">
-        <div className="auth-logo">
+        <Link
+          to="/"
+          aria-label="Back to home"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 13,
+            color: 'var(--fg-3)',
+            textDecoration: 'none',
+            marginBottom: 16,
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Back to home
+        </Link>
+        <Link to="/" className="auth-logo" style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className="auth-logo-mark">K</div>
           Kompflow
-        </div>
+        </Link>
         <h1 className="auth-title">Welcome back</h1>
         <p className="auth-sub">Sign in to your boards</p>
 

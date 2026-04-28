@@ -33,20 +33,31 @@ export class BoardsService {
       _max: { position: true },
     });
 
-    const board = await this.prisma.board.create({
-      data: {
-        ownerId: userId,
-        title: dto.title,
-        description: dto.description,
-        encrypted: dto.encrypted ?? false,
-        position: (max._max.position ?? 0) + 1024,
-        members: {
-          create: { userId, role: 'owner' },
-        },
-      },
-    });
+    const nextPosition = (max._max.position ?? 0) + 1024;
 
-    return board;
+    return this.prisma.$transaction(async (tx) => {
+      const board = await tx.board.create({
+        data: {
+          ownerId: userId,
+          title: dto.title,
+          description: dto.description,
+          encrypted: dto.encrypted ?? false,
+          position: nextPosition,
+          members: {
+            create: { userId, role: 'owner' },
+          },
+          columns: {
+            create: [
+              { title: 'To Do', position: 1024 },
+              { title: 'In Progress', position: 2048 },
+              { title: 'Done', position: 3072 },
+            ],
+          },
+        },
+      });
+
+      return board;
+    });
   }
 
   async show(userId: string, boardId: string) {
