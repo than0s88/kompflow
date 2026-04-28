@@ -29,11 +29,6 @@ The API container auto-runs the demo seeder on every boot, right after applying 
 - One shared workspace (`Alex's Workspace`) with both accounts as members
 - Three pre-populated boards: **Q3 Product Launch**, **Engineering — Sprint 24**, **Marketing — Spring Campaign** — each with realistic cards (covers, labels, due dates, member assignments) and a week of fake activity history so the timeline isn't empty
 
-The seed is **idempotent** — re-running it refreshes the demo data in place. To re-seed manually any time:
-
-```bash
-docker compose exec api pnpm --filter @kanban/api db:seed
-```
 
 ### Demo accounts
 
