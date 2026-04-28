@@ -140,7 +140,7 @@ export const DEFAULT_SETTINGS: Settings = {
   motion: 1,
   density: 'comfy',
   cardSize: 'default',
-  accent: 'blue',
+  accent: 'royal',
 };
 
 const STORAGE_KEY = 'kompflow.settings';

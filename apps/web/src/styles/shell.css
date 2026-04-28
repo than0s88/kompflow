@@ -310,6 +310,32 @@
   color: #ffffff !important;
 }
 
+/* But the WorkspaceSwitcher dropdown (anchored inside the sidebar but
+   rendered with a light theme-app background) must restore theme colors
+   so its items aren't white-on-white. */
+.kf-sidebar .kf-wsswitch__menu,
+.kf-sidebar .kf-wsswitch__menu *,
+.kf-sidebar .kf-wsswitch__item,
+.kf-sidebar .kf-wsswitch__item *,
+.kf-sidebar .kf-wsswitch__create,
+.kf-sidebar .kf-wsswitch__empty,
+.kf-sidebar .kf-wsswitch__count {
+  color: var(--fg-1) !important;
+}
+.kf-sidebar .kf-wsswitch__item.is-active,
+.kf-sidebar .kf-wsswitch__item.is-active * {
+  color: var(--accent-600) !important;
+}
+.kf-sidebar .kf-wsswitch__create {
+  color: var(--accent-600) !important;
+}
+.kf-sidebar .kf-wsswitch__count {
+  color: var(--fg-3) !important;
+}
+.kf-sidebar .kf-wsswitch__empty {
+  color: var(--fg-3) !important;
+}
+
 .kf-sidebar__bottom {
   margin-top: auto; padding-top: 10px;
   border-top: 1px solid var(--canvas-hairline);
