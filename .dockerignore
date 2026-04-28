@@ -1,0 +1,13 @@
+# root-level dockerignore — keeps build contexts lean
+**/node_modules
+**/dist
+**/.turbo
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+.git
+.github
+.vscode
+.idea

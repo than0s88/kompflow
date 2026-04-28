@@ -1,0 +1,69 @@
+name: kanban-board
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kanban
+      POSTGRES_PASSWORD: kanban
+      POSTGRES_DB: kanban
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kanban -d kanban"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://kanban:kanban@db:5432/kanban?schema=public
+      JWT_SECRET: demo-secret-do-not-use-in-production-9c7f2e0a
+      JWT_EXPIRES_IN: 7d
+      PORT: "3001"
+      WEB_ORIGIN: http://localhost:8080
+      COOKIE_DOMAIN: localhost
+      COOKIE_SECURE: "false"
+      # Pusher is optional — server logs a warning and skips broadcasts when blank.
+      PUSHER_APP_ID: ""
+      PUSHER_KEY: ""
+      PUSHER_SECRET: ""
+      PUSHER_CLUSTER: ""
+      # OAuth env vars are intentionally left unset — strategies fall back to
+      # "unset" placeholders and emit a warning. Setting them to "" would pass
+      # through the ?? guard and crash passport-google-oauth20 on boot.
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/api"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_PUSHER_KEY: ""
+        VITE_PUSHER_CLUSTER: ""
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+volumes:
+  db_data:
