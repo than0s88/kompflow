@@ -21,10 +21,7 @@ export default function WorkspaceActivity() {
           ) : null}
           {!isLoading && workspace ? (
             <p className="kf-act__workspace-banner">
-              {workspace.name}{' '}
-              <span aria-hidden>
-                {workspace.visibility === 'private' ? '🔒' : '🌐'}
-              </span>
+              {workspace.name} <span aria-hidden>👥</span>
             </p>
           ) : null}
         </div>

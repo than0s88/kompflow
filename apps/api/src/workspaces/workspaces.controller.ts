@@ -50,4 +50,14 @@ export class WorkspacesController {
   destroy(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.workspaces.destroy(user.id, id);
   }
+
+  @Delete(':id/members/:userId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeMember(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('userId') targetUserId: string,
+  ): Promise<void> {
+    await this.workspaces.removeMember(user.id, id, targetUserId);
+  }
 }

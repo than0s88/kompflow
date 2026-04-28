@@ -179,6 +179,10 @@ export class BoardsService {
           { ownerId: userId },
           { members: { some: { userId, role: { in: ['owner', 'editor'] } } } },
           { workspace: { ownerId: userId } },
+          // Workspace members get edit access by default — board-level
+          // BoardMember rows still let owners restrict via 'viewer' role
+          // when they want explicit per-board permissions.
+          { workspace: { members: { some: { userId } } } },
         ],
       },
     });

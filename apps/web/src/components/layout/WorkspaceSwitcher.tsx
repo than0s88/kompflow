@@ -48,7 +48,7 @@ export default function WorkspaceSwitcher({
         aria-expanded={open}
       >
         <span className="kf-wsswitch__icon" aria-hidden>
-          {active?.visibility === 'private' ? '🔒' : '🌐'}
+          👥
         </span>
         <span className="kf-wsswitch__name">
           {active?.name ?? 'Choose a workspace'}
@@ -80,7 +80,7 @@ export default function WorkspaceSwitcher({
                     }}
                   >
                     <span className="kf-wsswitch__icon" aria-hidden>
-                      {w.visibility === 'private' ? '🔒' : '🌐'}
+                      👥
                     </span>
                     <span className="kf-wsswitch__name">{w.name}</span>
                     <span className="kf-wsswitch__count">

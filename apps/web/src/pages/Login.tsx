@@ -20,7 +20,12 @@ export default function Login() {
     if (provider) setError(`Sign-in with ${provider} failed. Please try again.`);
   }, [search]);
 
-  if (user) return <Navigate to="/dashboard" replace />;
+  const inviteToken = search.get('invite');
+  const inviteDest = inviteToken ? `/invite/${inviteToken}` : null;
+
+  if (user) {
+    return <Navigate to={inviteDest ?? '/dashboard'} replace />;
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -28,7 +33,8 @@ export default function Login() {
     setError(null);
     try {
       await login(email, password);
-      const dest = location.state?.from?.pathname ?? '/dashboard';
+      const dest =
+        inviteDest ?? location.state?.from?.pathname ?? '/dashboard';
       navigate(dest, { replace: true });
     } catch (err: unknown) {
       const msg =

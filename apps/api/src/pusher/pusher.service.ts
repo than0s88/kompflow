@@ -89,6 +89,16 @@ export class PusherService {
     userId: string,
   ): { auth: string } | null {
     if (!this.pusher) return null;
-    return this.pusher.authorizeChannel(socketId, channel, { user_id: userId });
+    // For private-* channels, do NOT pass presence data — the Pusher SDK
+    // would otherwise include it in the signature payload, but the
+    // pusher-js client doesn't send that data on subscribe, so the
+    // signatures don't match and soketi returns 401 AuthError.
+    // Presence data only goes with presence-* channels.
+    if (channel.startsWith('presence-')) {
+      return this.pusher.authorizeChannel(socketId, channel, {
+        user_id: userId,
+      });
+    }
+    return this.pusher.authorizeChannel(socketId, channel);
   }
 }

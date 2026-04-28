@@ -54,6 +54,12 @@ services:
         condition: service_healthy
       soketi:
         condition: service_started
+    # Pull GOOGLE_*/SMTP_* and any other creds from apps/api/.env if it exists.
+    # The "environment:" block below overrides DB and Soketi-related vars so the
+    # local Postgres + Soketi stack always wins over any cloud values in .env.
+    env_file:
+      - path: apps/api/.env
+        required: false
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://kompflow:kompflow@db:5432/kompflow?schema=public
@@ -74,6 +80,9 @@ services:
       # OAuth env vars are intentionally left unset — strategies fall back to
       # "unset" placeholders and just log a warning. Setting them to "" would
       # crash passport-google-oauth20 on boot.
+      UPLOAD_DIR: /var/lib/kompflow/uploads
+    volumes:
+      - uploads_data:/var/lib/kompflow/uploads
     ports:
       - "3001:3001"
 
@@ -96,3 +105,4 @@ services:
 
 volumes:
   db_data:
+  uploads_data:

@@ -5,11 +5,12 @@ import { DndContext } from '@dnd-kit/core';
 import { SortableContext } from '@dnd-kit/sortable';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Card } from '@kanban/shared';
+import { AuthProvider } from '../../auth/AuthContext';
 import KanbanCard from './Card';
 
-// Build a self-contained provider tree: react-query + dnd-kit contexts.
-// The component uses useSortable and useMutation, both of which need their
-// providers in the React tree or they crash on mount.
+// Build a self-contained provider tree: react-query + dnd-kit + auth.
+// Card uses useAuth() for the assignee avatar; useSortable for drag; and
+// useMutation for the title/delete edits — all three need providers.
 function renderCard(props: {
   card: Card;
   boardId: string;
@@ -20,11 +21,13 @@ function renderCard(props: {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <DndContext>
-        <SortableContext items={[`card-${props.card.id}`]}>
-          <KanbanCard {...props} />
-        </SortableContext>
-      </DndContext>
+      <AuthProvider>
+        <DndContext>
+          <SortableContext items={[`card-${props.card.id}`]}>
+            <KanbanCard {...props} />
+          </SortableContext>
+        </DndContext>
+      </AuthProvider>
     </QueryClientProvider>,
   );
 }

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import BoardCard from '../components/BoardCard';
 import BoardCreateModal from '../components/BoardCreateModal';
+import MembersPanel from '../components/workspace/MembersPanel';
 import { useWorkspace } from '../hooks/useWorkspaces';
 import { api } from '../lib/api';
 
@@ -52,7 +53,7 @@ export default function WorkspaceView() {
         <div>
           <h1>
             <span className="kf-icon" aria-hidden>
-              {workspace.visibility === 'private' ? '🔒' : '🌐'}
+              👥
             </span>{' '}
             {workspace.name}
           </h1>
@@ -93,6 +94,8 @@ export default function WorkspaceView() {
           ))}
         </div>
       )}
+
+      <MembersPanel workspace={workspace} />
 
       {creating ? (
         <BoardCreateModal

@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateCardDto {
   @IsOptional()
@@ -10,4 +10,9 @@ export class UpdateCardDto {
   @IsString()
   @MaxLength(5000)
   description?: string;
+
+  // { cover, labels[], dueDate, memberIds[] } — see lib/card-ornaments.ts on web
+  @IsOptional()
+  @IsObject()
+  ornaments?: Record<string, unknown>;
 }

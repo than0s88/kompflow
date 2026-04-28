@@ -1,5 +1,6 @@
-import type { Workspace, WorkspaceVisibility } from '@kanban/shared';
+import type { Workspace } from '@kanban/shared';
 import { useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useCreateWorkspace } from '../../hooks/useWorkspaces';
 
@@ -10,20 +11,19 @@ interface Props {
 
 export default function WorkspaceCreateModal({ onClose, onCreated }: Props) {
   const [name, setName] = useState('');
-  const [visibility, setVisibility] = useState<WorkspaceVisibility>('private');
   const create = useCreateWorkspace();
   const navigate = useNavigate();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    const ws = await create.mutateAsync({ name: name.trim(), visibility });
+    const ws = await create.mutateAsync({ name: name.trim() });
     onCreated?.(ws);
     navigate(`/workspaces/${ws.id}`);
     onClose();
   }
 
-  return (
+  return createPortal(
     <div
       className="kf-modal__backdrop"
       role="dialog"
@@ -51,48 +51,15 @@ export default function WorkspaceCreateModal({ onClose, onCreated }: Props) {
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Trello Workspace"
+              placeholder="e.g. Marketing Team"
               maxLength={80}
               className="kf-input"
               required
             />
           </label>
-
-          <fieldset className="kf-field">
-            <legend className="kf-field__label">Visibility</legend>
-            <div className="kf-radiogrp">
-              <label className="kf-radio">
-                <input
-                  type="radio"
-                  name="visibility"
-                  value="private"
-                  checked={visibility === 'private'}
-                  onChange={() => setVisibility('private')}
-                />
-                <span>
-                  <strong>🔒 Private</strong>
-                  <span className="kf-radio__hint">
-                    Only invited members can see this workspace.
-                  </span>
-                </span>
-              </label>
-              <label className="kf-radio">
-                <input
-                  type="radio"
-                  name="visibility"
-                  value="workspace"
-                  checked={visibility === 'workspace'}
-                  onChange={() => setVisibility('workspace')}
-                />
-                <span>
-                  <strong>🌐 Workspace-public</strong>
-                  <span className="kf-radio__hint">
-                    Anyone in your workspace can see the boards inside.
-                  </span>
-                </span>
-              </label>
-            </div>
-          </fieldset>
+          <p className="kf-field__hint">
+            You can invite teammates after creating the workspace.
+          </p>
 
           {create.error ? (
             <p className="kf-modal__error" role="alert">
@@ -119,6 +86,7 @@ export default function WorkspaceCreateModal({ onClose, onCreated }: Props) {
           </footer>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -17,11 +17,12 @@ model User {
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
-  ownedBoards          Board[]            @relation("BoardOwner")
+  ownedBoards          Board[]               @relation("BoardOwner")
   memberships          BoardMember[]
-  ownedWorkspaces      Workspace[]        @relation("WorkspaceOwner")
+  ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
   activities           Activity[]
+  invitationsSent      WorkspaceInvitation[] @relation("InvitedBy")
 
   @@map("users")
 }
@@ -31,14 +32,14 @@ model Workspace {
   name        String
   slug        String              @unique
   ownerId     String              @map("owner_id")
-  visibility  String              @default("private") // private | workspace
   createdAt   DateTime            @default(now()) @map("created_at")
   updatedAt   DateTime            @updatedAt @map("updated_at")
 
-  owner       User                @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  owner       User                  @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members     WorkspaceMember[]
   boards      Board[]
   activities  Activity[]
+  invitations WorkspaceInvitation[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -117,6 +118,8 @@ model Card {
   title       String
   description String?
   position    Int      @default(0)
+  // Visual + tracking metadata: { cover, labels[], dueDate, memberIds[] }
+  ornaments   Json?
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -124,6 +127,27 @@ model Card {
 
   @@index([columnId, position])
   @@map("cards")
+}
+
+model WorkspaceInvitation {
+  id           String    @id @default(cuid())
+  workspaceId  String    @map("workspace_id")
+  email        String
+  role         String    @default("member") // admin | member
+  tokenHash    String    @unique @map("token_hash")
+  invitedById  String    @map("invited_by_id")
+  status       String    @default("pending") // pending | accepted | revoked | expired
+  expiresAt    DateTime  @map("expires_at")
+  acceptedAt   DateTime? @map("accepted_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy User      @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([email])
+  @@map("workspace_invitations")
 }
 
 model Activity {

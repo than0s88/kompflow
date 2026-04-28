@@ -1,15 +1,72 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ActivityService } from '../activity/activity.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 
 @Injectable()
 export class WorkspacesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activity: ActivityService,
+  ) {}
+
+  /**
+   * Remove a workspace member. Admins (or the workspace owner) can remove
+   * anyone except the workspace owner; members can remove themselves
+   * (i.e. leave the workspace). Logs a "removed" activity so other
+   * workspace members see the change in real time.
+   */
+  async removeMember(
+    actorId: string,
+    workspaceId: string,
+    targetUserId: string,
+  ): Promise<void> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    });
+    if (!workspace) throw new NotFoundException('Workspace not found');
+
+    if (workspace.ownerId === targetUserId) {
+      throw new BadRequestException(
+        'The workspace owner cannot be removed. Transfer ownership or delete the workspace instead.',
+      );
+    }
+
+    // Self-removal is always allowed (leaving). Otherwise must be admin.
+    if (targetUserId !== actorId) {
+      await this.assertCanEdit(actorId, workspaceId);
+    } else {
+      await this.assertCanView(actorId, workspaceId);
+    }
+
+    const member = await this.prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+      include: {
+        user: { select: { id: true, name: true } },
+      },
+    });
+    if (!member) throw new NotFoundException('Member not found');
+
+    await this.prisma.workspaceMember.delete({
+      where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+    });
+
+    await this.activity.log({
+      workspaceId,
+      actorId,
+      verb: 'removed',
+      entityType: 'member',
+      entityId: targetUserId,
+      entityTitle: member.user.name,
+      metadata: { selfLeave: targetUserId === actorId },
+    });
+  }
 
   async listForUser(userId: string) {
     return this.prisma.workspace.findMany({
@@ -31,7 +88,6 @@ export class WorkspacesService {
         name: dto.name,
         slug,
         ownerId: userId,
-        visibility: dto.visibility ?? 'private',
         members: { create: { userId, role: 'admin' } },
       },
     });

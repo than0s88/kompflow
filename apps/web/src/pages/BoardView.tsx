@@ -1,4 +1,5 @@
 import type {
+  ActivityRecord,
   Board,
   Card,
   Column,
@@ -70,7 +71,13 @@ export default function BoardView() {
     if (board?.title) setTitleDraft(board.title);
   }, [board?.title]);
 
-  // Real-time: refetch when other users update the board
+  // Real-time: refetch the board whenever another user moves/edits/creates
+  // anything on it. We listen to two events on `private-board-{id}`:
+  //  • `board.updated` — explicit board-level updates (title, settings)
+  //  • `activity.created` — every card/column/board mutation logs an activity,
+  //    so this is our universal "the board changed" signal.
+  // Both handlers suppress events whose actor is the current user (their UI
+  // already reflects the change via optimistic update / mutation onSuccess).
   useEffect(() => {
     if (!boardId || !user) return;
     let pusher;
@@ -79,16 +86,39 @@ export default function BoardView() {
     } catch {
       return;
     }
-    const channel = pusher.subscribe(`private-board-${boardId}`);
-    const handler = (e: { actor_user_id?: string | null; actorUserId?: string | null }) => {
-      const actor = e.actor_user_id ?? e.actorUserId ?? null;
-      if (actor === user.id) return;
+    const channelName = `private-board-${boardId}`;
+    const channel = pusher.subscribe(channelName);
+
+    const refetchBoard = () => {
       void qc.invalidateQueries({ queryKey: ['board', boardId] });
     };
-    channel.bind('board.updated', handler);
+
+    const onBoardUpdated = (e: {
+      actor_user_id?: string | null;
+      actorUserId?: string | null;
+    }) => {
+      const actor = e.actor_user_id ?? e.actorUserId ?? null;
+      if (actor === user.id) return;
+      refetchBoard();
+    };
+
+    const onActivity = (record: ActivityRecord) => {
+      if (record.actorId === user.id) return;
+      const refetchEntities: ReadonlyArray<ActivityRecord['entityType']> = [
+        'card',
+        'column',
+        'board',
+      ];
+      if (!refetchEntities.includes(record.entityType)) return;
+      refetchBoard();
+    };
+
+    channel.bind('board.updated', onBoardUpdated);
+    channel.bind('activity.created', onActivity);
     return () => {
-      channel.unbind('board.updated', handler);
-      pusher.unsubscribe(`private-board-${boardId}`);
+      channel.unbind('board.updated', onBoardUpdated);
+      channel.unbind('activity.created', onActivity);
+      pusher.unsubscribe(channelName);
     };
   }, [boardId, user, qc]);
 
@@ -294,6 +324,11 @@ export default function BoardView() {
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          /* Cancel handlers prevent a stuck active card (Esc, escape-key,
+             drop outside any droppable). Without these, the DragOverlay
+             keeps rendering a floating clone of the card. */
+          onDragCancel={() => setActive(null)}
+          onDragAbort={() => setActive(null)}
         >
           <div className={'board' + (active ? ' is-dragging' : '')}>
             <SortableContext
@@ -345,6 +380,7 @@ export default function BoardView() {
         <CardModal
           card={openCardCtx.card}
           boardId={board.id}
+          workspaceId={board.workspaceId}
           columnTitle={openCardCtx.column.title}
           encryptionKey={null}
           onClose={() => setOpenCardId(null)}

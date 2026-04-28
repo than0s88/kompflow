@@ -1,6 +1,5 @@
 import type { Board } from '@kanban/shared';
 import { Link } from 'react-router-dom';
-import { gradientFor } from './layout/Sidebar';
 
 interface Props {
   board: Board;
@@ -9,10 +8,7 @@ interface Props {
 
 export default function BoardCard({ board, onDelete }: Props) {
   return (
-    <article
-      className="kf-board-card"
-      style={{ ['--card-gradient' as string]: gradientFor(board.id) }}
-    >
+    <article className="kf-board-card">
       <Link to={`/boards/${board.id}`} className="kf-board-card__link">
         <div className="kf-board-card__cover" aria-hidden />
         <div className="kf-board-card__body">

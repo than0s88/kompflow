@@ -77,6 +77,24 @@
   --label-lime:   #51E898;
   --label-pink:   #FF78CB;
   --label-black:  #344563;
+
+  /* Theme-aware canvas tokens — Trello-classic light defaults.
+     Light: canvas IS the accent at full saturation; sidebar is darker.
+     Dark: both shaded toward black. JS in applySettings recomputes per accent. */
+  --canvas-bg:           var(--bg-board);
+  --canvas-bg-sidebar:   color-mix(in srgb, var(--bg-board) 80%, #000);
+  --canvas-fg:           #FFFFFF;
+  --canvas-fg-sidebar:   #FFFFFF;
+  --canvas-fg-sidebar-soft:  rgba(255, 255, 255, 0.78);
+  --canvas-fg-sidebar-faint: rgba(255, 255, 255, 0.55);
+  --canvas-overlay-sidebar: rgba(255, 255, 255, 0.10);
+  --canvas-overlay-sidebar-strong: rgba(255, 255, 255, 0.18);
+  --canvas-hairline-sidebar: rgba(255, 255, 255, 0.12);
+  --canvas-fg-soft:      rgba(255, 255, 255, 0.78);
+  --canvas-fg-faint:     rgba(255, 255, 255, 0.55);
+  --canvas-overlay:      rgba(255, 255, 255, 0.08);
+  --canvas-overlay-strong: rgba(255, 255, 255, 0.16);
+  --canvas-hairline:     rgba(255, 255, 255, 0.12);
 }
 
 [data-theme="dark"] {
@@ -102,6 +120,16 @@
   --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
   --shadow-modal: 0 20px 48px rgba(0,0,0,0.6), 0 8px 16px rgba(0,0,0,0.4);
   --shadow-drag: 0 16px 32px rgba(0,0,0,0.6), 0 6px 10px rgba(0,0,0,0.4);
+
+  /* Dark canvas: deepen the accent toward black, even darker sidebar. */
+  --canvas-bg:           color-mix(in srgb, var(--bg-board) 55%, #000);
+  --canvas-bg-sidebar:   color-mix(in srgb, var(--bg-board) 35%, #000);
+  --canvas-fg:           #FFFFFF;
+  --canvas-fg-soft:      rgba(255, 255, 255, 0.78);
+  --canvas-fg-faint:     rgba(255, 255, 255, 0.55);
+  --canvas-overlay:      rgba(255, 255, 255, 0.06);
+  --canvas-overlay-strong: rgba(255, 255, 255, 0.12);
+  --canvas-hairline:     rgba(255, 255, 255, 0.10);
 }
 
 /* Density variants */
@@ -351,9 +379,11 @@ a { color: inherit; }
 .board::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.45); border: 3px solid transparent; background-clip: padding-box; }
 .board::-webkit-scrollbar-track { background: transparent; }
 
+/* Lanes are always Trello-gray with dark text — paired with always-white
+   cards inside, regardless of theme. */
 .lane {
   flex: 0 0 280px;
-  background: var(--bg-lane);
+  background: #EBECF0;
   border-radius: var(--r-lane);
   display: flex;
   flex-direction: column;
@@ -361,7 +391,7 @@ a { color: inherit; }
   box-shadow: 0 1px 0 rgba(9,30,66,0.04);
   transition: background var(--dur-fast);
 }
-.lane.is-dropping { background: var(--bg-lane-hover); }
+.lane.is-dropping { background: #DFE1E6; }
 .lane-header {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 8px 8px 12px;
@@ -370,7 +400,7 @@ a { color: inherit; }
 .lane-title {
   flex: 1;
   font-size: 14px; font-weight: 700;
-  color: var(--fg-1);
+  color: #172B4D;
   padding: 4px 6px;
   border-radius: 6px;
   cursor: text;
@@ -378,25 +408,22 @@ a { color: inherit; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: background var(--dur-fast);
 }
-.lane-title:hover { background: rgba(0,0,0,0.04); }
-.lane-title:focus { background: var(--bg-app); box-shadow: 0 0 0 2px var(--accent); }
-[data-theme="dark"] .lane-title:hover { background: rgba(255,255,255,0.06); }
+.lane-title:hover { background: rgba(0,0,0,0.06); }
+.lane-title:focus { background: #FFFFFF; box-shadow: 0 0 0 2px var(--accent); }
 .lane-count {
-  font-size: 12px; font-weight: 600; color: var(--fg-3);
+  font-size: 12px; font-weight: 600; color: #6B778C;
   padding: 2px 7px; border-radius: var(--r-pill);
-  background: rgba(0,0,0,0.06);
+  background: rgba(9,30,66,0.08);
 }
-[data-theme="dark"] .lane-count { background: rgba(255,255,255,0.08); }
 .lane-menu {
   width: 28px; height: 28px;
   border-radius: 6px;
   display: grid; place-items: center;
-  color: var(--fg-2);
+  color: #44546F;
   transition: background var(--dur-fast);
   flex-shrink: 0;
 }
-.lane-menu:hover { background: rgba(0,0,0,0.06); color: var(--fg-1); }
-[data-theme="dark"] .lane-menu:hover { background: rgba(255,255,255,0.08); }
+.lane-menu:hover { background: rgba(9,30,66,0.08); color: #172B4D; }
 
 .lane-cards {
   display: flex;
@@ -411,19 +438,17 @@ a { color: inherit; }
 .lane-cards::-webkit-scrollbar { width: 8px; }
 .lane-cards::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 999px; }
 .lane-cards::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
-[data-theme="dark"] .lane-cards::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
 
 .lane-add {
   margin: 0 8px 8px;
   padding: 8px 10px;
   border-radius: 8px;
   font-size: 13px; font-weight: 500;
-  color: var(--fg-2);
+  color: #44546F;
   display: flex; align-items: center; gap: 6px;
   transition: background var(--dur-fast), color var(--dur-fast);
 }
-.lane-add:hover { background: rgba(0,0,0,0.06); color: var(--fg-1); }
-[data-theme="dark"] .lane-add:hover { background: rgba(255,255,255,0.06); }
+.lane-add:hover { background: rgba(9,30,66,0.08); color: #172B4D; }
 
 /* New lane button */
 .lane-new {
@@ -445,7 +470,7 @@ a { color: inherit; }
 /* Lane composer (rename / new lane) */
 .lane-composer {
   flex: 0 0 280px;
-  background: var(--bg-lane);
+  background: #EBECF0;
   border-radius: var(--r-lane);
   padding: 8px;
 }
@@ -454,15 +479,19 @@ a { color: inherit; }
   padding: 8px 10px;
   border-radius: 8px;
   border: 2px solid var(--accent);
-  background: var(--bg-app);
+  background: #FFFFFF;
+  color: #172B4D;
   font-size: 14px; font-weight: 600;
   outline: none;
 }
 .lane-composer-actions { display: flex; gap: 6px; margin-top: 6px; }
 
 /* ============== CARD ============== */
+/* Cards are always white — Trello-style — regardless of theme. Text inside
+   stays dark (Trello ink) so contrast holds in both light and dark modes. */
 .card {
-  background: var(--bg-card);
+  background: #FFFFFF;
+  color: #172B4D;
   border-radius: var(--r-card);
   padding: var(--card-pad-y) var(--card-pad-x);
   box-shadow: var(--shadow-card);
@@ -476,12 +505,21 @@ a { color: inherit; }
   border: 1px solid transparent;
 }
 .card:hover {
-  background: var(--bg-card-hover);
+  background: #FAFBFC;
   box-shadow: var(--shadow-card-hover);
 }
+/* Floating clone rendered by <DragOverlay> — give it a tilt + lift shadow. */
 .card.is-dragging {
-  opacity: 0.4;
-  transform: rotate(2deg);
+  transform: rotate(3deg);
+  box-shadow: var(--shadow-drag);
+  cursor: grabbing;
+}
+/* Original card while a drag is in flight — hide it so the overlay is the
+   only thing on screen. Keeping it in the DOM (not display:none) so the
+   sortable layout still reserves the slot. */
+.card.is-drag-source {
+  opacity: 0;
+  pointer-events: none;
 }
 .card-cover {
   height: 32px;
@@ -508,7 +546,7 @@ a { color: inherit; }
 .card-title {
   font-size: 14px;
   font-weight: 500;
-  color: var(--fg-1);
+  color: #172B4D;
   line-height: 1.4;
   word-break: break-word;
   white-space: pre-wrap;
@@ -519,13 +557,13 @@ a { color: inherit; }
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   margin-top: 6px;
   font-size: 12px;
-  color: var(--fg-3);
+  color: #6B778C;
 }
 .card-meta-icon { display: inline-flex; align-items: center; gap: 3px; }
-.card-meta-icon.has-desc { color: var(--fg-2); }
+.card-meta-icon.has-desc { color: #44546F; }
 .card-meta-icon.due {
   padding: 2px 6px; border-radius: 4px;
-  background: var(--bg-input-soft); color: var(--fg-2);
+  background: #F4F5F7; color: #44546F;
 }
 .card-meta-icon.due.overdue { background: #FFEBE6; color: #C9372C; }
 .card-meta-icon.due.soon { background: #FFFAE6; color: #946F00; }
@@ -533,7 +571,7 @@ a { color: inherit; }
 .card-assignees .avatar { width: 22px; height: 22px; font-size: 10px; border-width: 1.5px; margin-left: -6px; }
 .card-locked {
   position: absolute; top: 6px; right: 6px;
-  font-size: 10px; color: var(--fg-3);
+  font-size: 10px; color: #6B778C;
   display: inline-flex; align-items: center; gap: 2px;
 }
 .card-edit-btn {
@@ -543,15 +581,14 @@ a { color: inherit; }
   background: rgba(255,255,255,0.92);
   display: none;
   place-items: center;
-  color: var(--fg-2);
+  color: #44546F;
   box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 .card:hover .card-edit-btn { display: grid; }
-[data-theme="dark"] .card-edit-btn { background: rgba(40,46,51,0.95); }
 
 /* Card composer */
 .card-composer {
-  background: var(--bg-card);
+  background: #FFFFFF;
   border-radius: var(--r-card);
   padding: 8px;
   box-shadow: var(--shadow-card);
@@ -562,7 +599,7 @@ a { color: inherit; }
   background: transparent;
   resize: none;
   font-size: 14px;
-  color: var(--fg-1);
+  color: #172B4D;
   min-height: 56px;
   font-family: inherit;
 }
@@ -838,115 +875,141 @@ a { color: inherit; }
 }
 .card:focus-visible, .auth-input:focus-visible { outline: none; }
 
-/* ============== SETTINGS PANEL ============== */
-.settings-overlay {
-  position: fixed; inset: 0;
-  background: var(--bg-overlay);
-  z-index: 300;
-  display: flex; justify-content: flex-end;
-  animation: fadeIn var(--dur-fast) var(--ease-out);
-}
-.settings-panel {
-  width: min(420px, 100%);
-  height: 100%;
+/* ============== APPEARANCE PICKER ============== */
+.kf-appearance { position: relative; }
+.kf-appearance__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  /* Sits inside the raised .kf-board-page__head context, so this just orders
+     against header siblings (e.g. the Activity button + drawer trigger). */
+  z-index: 5;
+  width: 340px;
+  max-height: 80vh;
   background: var(--bg-app);
+  color: var(--fg-1);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
   box-shadow: var(--shadow-modal);
   display: flex; flex-direction: column;
-  outline: none;
-  animation: settingsSlideIn var(--dur-base) var(--ease-out);
+  animation: kf-appearance-in 140ms var(--ease-out);
 }
-@keyframes settingsSlideIn {
-  from { transform: translateX(24px); opacity: 0.001; }
-  to   { transform: translateX(0);    opacity: 1; }
+[data-theme="dark"] .kf-appearance__panel {
+  background: var(--bg-card);
+  border-color: rgba(255,255,255,0.08);
 }
-.settings-header {
+@keyframes kf-appearance-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* Floating variant — positioned via JS (createPortal to <body>) using
+   trigger.getBoundingClientRect, so it can never be clipped by ancestors
+   and is always bounded by the viewport. The inline style supplies
+   position/top/left/maxHeight; we just neutralize the absolute-positioning
+   defaults and bump z-index to sit above all content. */
+.kf-appearance__panel--floating {
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 1000;
+  overflow-y: auto;
+}
+.kf-appearance__head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 22px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--hairline);
   flex-shrink: 0;
 }
-.settings-title {
+.kf-appearance__title {
   margin: 0;
-  font-size: 17px; font-weight: 800; letter-spacing: -0.01em;
+  font-size: 14px; font-weight: 800; letter-spacing: -0.01em;
   color: var(--fg-1);
 }
-.settings-close {
-  width: 32px; height: 32px;
+.kf-appearance__close {
+  width: 26px; height: 26px;
   border-radius: 6px;
   display: grid; place-items: center;
+  background: transparent; border: 0;
   color: var(--fg-2);
+  font-size: 22px; line-height: 1;
+  cursor: pointer;
   transition: background var(--dur-fast), color var(--dur-fast);
 }
-.settings-close:hover { background: var(--bg-input-soft); color: var(--fg-1); }
-.settings-body {
-  padding: 8px 22px 22px;
+.kf-appearance__close:hover { background: var(--bg-input-soft); color: var(--fg-1); }
+.kf-appearance__body {
+  padding: 4px 16px;
   overflow-y: auto;
   flex: 1;
 }
-.settings-row {
-  display: flex; flex-direction: column; gap: 10px;
-  padding: 16px 0;
+.kf-appearance__row {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--hairline);
 }
-.settings-row:last-child { border-bottom: 0; }
-.settings-row-text { display: flex; flex-direction: column; gap: 2px; }
-.settings-row-label {
-  font-size: 14px; font-weight: 700; color: var(--fg-1);
+.kf-appearance__row:last-child { border-bottom: 0; }
+.kf-appearance__row-text { display: flex; flex-direction: column; gap: 2px; }
+.kf-appearance__row-label {
+  font-size: 13px; font-weight: 700; color: var(--fg-1);
 }
-.settings-row-hint {
-  font-size: 12px; color: var(--fg-3); line-height: 1.45;
+.kf-appearance__row-hint {
+  font-size: 11px; color: var(--fg-3); line-height: 1.45;
 }
-.settings-row-control { display: flex; }
-.settings-segmented {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 4px;
+.kf-appearance__row-control { display: flex; flex-direction: column; gap: 8px; }
+
+.kf-appearance__segmented {
+  display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px;
   background: var(--bg-input-soft);
   border-radius: var(--r-input);
   width: 100%;
 }
-.settings-segmented-btn {
+.kf-appearance__segbtn {
   flex: 1 1 auto;
-  min-width: 56px;
-  padding: 7px 10px;
+  min-width: 48px;
+  padding: 6px 8px;
   border-radius: 8px;
-  font-size: 13px; font-weight: 600;
+  font-size: 12px; font-weight: 600;
   color: var(--fg-2);
-  background: transparent;
+  background: transparent; border: 0;
+  cursor: pointer;
   transition: background var(--dur-fast), color var(--dur-fast),
               box-shadow var(--dur-fast);
 }
-.settings-segmented-btn:hover { color: var(--fg-1); }
-.settings-segmented-btn.is-active {
+.kf-appearance__segbtn:hover { color: var(--fg-1); }
+.kf-appearance__segbtn.is-active {
   background: var(--bg-app);
   color: var(--fg-1);
   box-shadow: var(--shadow-card);
 }
-[data-theme="dark"] .settings-segmented-btn.is-active {
+[data-theme="dark"] .kf-appearance__segbtn.is-active {
   background: var(--bg-card);
 }
-.settings-footer {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 8px;
-  padding: 14px 22px;
-  border-top: 1px solid var(--hairline);
-  flex-shrink: 0;
-  background: var(--bg-app);
+
+.kf-appearance__swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.kf-appearance__swatch {
+  width: 100%; aspect-ratio: 1;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast);
+}
+.kf-appearance__swatch:hover { transform: scale(1.1); }
+.kf-appearance__swatch.is-active {
+  border-color: var(--fg-1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fg-1) 20%, transparent);
+}
+[data-theme="dark"] .kf-appearance__swatch.is-active {
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
 }
 
-@media (max-width: 640px) {
-  .settings-overlay { align-items: flex-end; }
-  .settings-panel {
-    width: 100%;
-    height: auto;
-    max-height: 88vh;
-    border-top-left-radius: var(--r-modal);
-    border-top-right-radius: var(--r-modal);
-    animation: settingsSlideUp var(--dur-base) var(--ease-out);
-  }
-  @keyframes settingsSlideUp {
-    from { transform: translateY(24px); opacity: 0.001; }
-    to   { transform: translateY(0);    opacity: 1; }
-  }
+.kf-appearance__footer {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--hairline);
+  flex-shrink: 0;
 }

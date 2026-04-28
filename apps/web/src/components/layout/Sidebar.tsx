@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation, useParams } from 'react-router-dom';
-import { useAuth } from '../../auth/AuthContext';
 import { useWorkspace, useWorkspaces } from '../../hooks/useWorkspaces';
-import SettingsPanel from '../SettingsPanel';
+import { useSidebarCollapsed } from '../../lib/sidebar-state';
+import AppearancePicker from '../AppearancePicker';
 import WorkspaceCreateModal from './WorkspaceCreateModal';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 
@@ -14,13 +14,12 @@ import WorkspaceSwitcher from './WorkspaceSwitcher';
  *   - Bottom: user identity, theme toggle, logout.
  */
 export default function Sidebar() {
-  const { user, logout } = useAuth();
   const { data: workspaces } = useWorkspaces();
   const location = useLocation();
   const { workspaceId: paramWorkspaceId, boardId: paramBoardId } = useParams();
+  const [, setCollapsed] = useSidebarCollapsed();
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Active workspace = explicit URL workspace > parent of current board > first
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -39,23 +38,35 @@ export default function Sidebar() {
     }
   }, [paramWorkspaceId, workspaces, activeId]);
 
-  const initials = user?.name
-    ? user.name
-        .split(' ')
-        .map((p) => p[0])
-        .filter(Boolean)
-        .slice(0, 2)
-        .join('')
-        .toUpperCase()
-    : 'U';
-
   return (
     <aside className="kf-sidebar" aria-label="Workspace navigation">
       <div className="kf-sidebar__top">
-        <Link to="/dashboard" className="kf-sidebar__logo">
-          <span className="kf-sidebar__logo-mark">K</span>
-          <span className="kf-sidebar__logo-name">Kompflow</span>
-        </Link>
+        <div className="kf-sidebar__logo-row">
+          <Link to="/dashboard" className="kf-sidebar__logo">
+            <span className="kf-sidebar__logo-mark">K</span>
+            <span className="kf-sidebar__logo-name">Kompflow</span>
+          </Link>
+          <button
+            type="button"
+            className="kf-sidebar__collapse"
+            onClick={() => setCollapsed(true)}
+            aria-label="Hide sidebar"
+            title="Hide sidebar"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M15 6l-6 6 6 6" />
+            </svg>
+          </button>
+        </div>
 
         <WorkspaceSwitcher
           workspaces={workspaces ?? []}
@@ -98,13 +109,10 @@ export default function Sidebar() {
           </>
         ) : null}
 
-        <button
-          type="button"
-          onClick={() => setSettingsOpen(true)}
-          className="kf-sidebar__navlink kf-sidebar__navlink--button"
-        >
-          <span aria-hidden>⚙️</span> Settings
-        </button>
+        <AppearancePicker
+          variant="sidebar"
+          triggerClassName="kf-sidebar__navlink kf-sidebar__navlink--button"
+        />
       </nav>
 
       {activeId ? (
@@ -116,28 +124,6 @@ export default function Sidebar() {
         <div className="kf-sidebar__empty">No workspace yet.</div>
       )}
 
-      <div className="kf-sidebar__bottom">
-        <div className="kf-sidebar__user">
-          <span className="kf-avatar" aria-hidden>
-            {initials}
-          </span>
-          <div className="kf-sidebar__user-meta">
-            <span className="kf-sidebar__user-name">
-              {user?.name ?? 'You'}
-            </span>
-            <button
-              type="button"
-              className="kf-sidebar__logout"
-              onClick={() => {
-                void logout();
-              }}
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-      </div>
-
       {createOpen ? (
         <WorkspaceCreateModal
           onClose={() => setCreateOpen(false)}
@@ -147,11 +133,6 @@ export default function Sidebar() {
           }}
         />
       ) : null}
-
-      <SettingsPanel
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
 
       {/* Resilience: closing sidebar on route changes is implicit through React Router. */}
       {location.pathname && null}

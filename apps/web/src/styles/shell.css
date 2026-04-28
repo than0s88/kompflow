@@ -5,16 +5,59 @@
   display: grid;
   grid-template-columns: 260px 1fr;
   min-height: 100vh;
-  background: var(--bg-board);
-  color: var(--fg-1);
+  background: var(--canvas-bg);
+  color: var(--canvas-fg);
+  transition: background var(--dur-base) var(--ease-out),
+              color var(--dur-base) var(--ease-out),
+              grid-template-columns var(--dur-base) var(--ease-out);
+}
+
+/* Pin each shell child to a fixed grid column so collapsing the sidebar
+   doesn't auto-reflow the main content into the (now 0-width) first track.
+   Without these, `display: none` on the sidebar makes grid promote main
+   into column 1, and the dashboard collapses to 0 width. */
+.kf-sidebar { grid-column: 1; }
+.kf-shell__main { grid-column: 2; }
+
+/* Collapsed: sidebar track shrinks to zero. The sidebar itself is hidden
+   so it doesn't render on top of the main content during the transition. */
+.kf-shell.is-sidebar-collapsed {
+  grid-template-columns: 0 1fr;
+}
+.kf-shell.is-sidebar-collapsed .kf-sidebar {
+  display: none;
 }
 
 .kf-shell__main {
   min-width: 0;
   overflow: auto;
-  background: var(--bg-board);
-  color: var(--fg-on-accent);
+  background: var(--canvas-bg);
+  color: var(--canvas-fg);
+  position: relative; /* anchor for the floating "Show sidebar" button */
+  transition: background var(--dur-base) var(--ease-out),
+              color var(--dur-base) var(--ease-out);
+  /* Width reserved on the right edge for the fixed ProfileMenu avatar so
+     header action clusters don't slide underneath it. */
+  --kf-profile-reserve: 64px;
 }
+
+/* Floating button shown only when the sidebar is collapsed. */
+.kf-sidebar-show {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 60;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  background: var(--canvas-overlay-strong);
+  color: var(--canvas-fg);
+  border: 1px solid var(--canvas-hairline);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.kf-sidebar-show:hover { background: var(--canvas-overlay); }
 
 @media (max-width: 768px) {
   .kf-shell { grid-template-columns: 1fr; }
@@ -25,25 +68,118 @@
    Sidebar
    ================================================================ */
 .kf-sidebar {
-  background: rgba(0,0,0,0.28);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: rgba(255,255,255,0.92);
+  /* Re-bind canvas tokens to sidebar variants so all descendants inherit the
+     correct contrast against the sidebar's (more saturated) background.
+     Sidebar text is always white-on-dark regardless of light/dark theme,
+     so the foreground tokens are pinned to white tints. */
+  --canvas-fg: #ffffff;
+  --canvas-fg-soft: rgba(255, 255, 255, 0.85);
+  --canvas-fg-faint: rgba(255, 255, 255, 0.55);
+  --canvas-overlay: var(--canvas-overlay-sidebar);
+  --canvas-overlay-strong: var(--canvas-overlay-sidebar-strong);
+  --canvas-hairline: var(--canvas-hairline-sidebar);
+
+  background: var(--canvas-bg-sidebar);
+  color: #ffffff;
   display: flex;
   flex-direction: column;
   padding: 14px 12px;
   gap: 10px;
-  border-right: 1px solid rgba(255,255,255,0.08);
+  border-right: 1px solid var(--canvas-hairline-sidebar);
   height: 100vh;
   position: sticky;
   top: 0;
-}
-
-[data-theme="dark"] .kf-sidebar {
-  background: rgba(0,0,0,0.40);
+  /* Raise the sidebar (and any popovers anchored to it — workspace switcher,
+     appearance panel) into a stacking context that paints above the main
+     content. Without this, sibling content in .kf-shell__main paints after
+     the sidebar and wins over its absolutely-positioned descendants. */
+  z-index: 50;
+  transition: background var(--dur-base) var(--ease-out),
+              color var(--dur-base) var(--ease-out);
 }
 
 .kf-sidebar__top { display: flex; flex-direction: column; gap: 12px; }
+
+/* ================================================================
+   Top-right profile menu — floats over the main content area
+   ================================================================ */
+.kf-profile {
+  position: fixed;
+  top: 14px;
+  right: 18px;
+  z-index: 80;
+}
+.kf-profile__btn {
+  display: inline-flex; align-items: center;
+  padding: 0;
+  border-radius: 999px;
+  background: transparent;
+  border: 2px solid var(--canvas-hairline);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+}
+.kf-profile__btn:hover { transform: scale(1.05); border-color: var(--canvas-fg); }
+.kf-profile__btn.is-active { border-color: var(--canvas-fg); }
+.kf-profile__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--bg-app);
+  color: var(--fg-1);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+  animation: kf-appearance-in 140ms var(--ease-out);
+}
+[data-theme="dark"] .kf-profile__menu {
+  background: var(--bg-card);
+  border-color: rgba(255,255,255,0.08);
+}
+.kf-profile__meta {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--hairline);
+}
+.kf-profile__name { font-size: 13px; font-weight: 700; color: var(--fg-1); line-height: 1.3; }
+.kf-profile__email { font-size: 12px; color: var(--fg-3); margin-top: 2px; word-break: break-all; }
+.kf-profile__item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent; border: 0;
+  color: var(--fg-1);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; text-align: left;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.kf-profile__item:hover { background: var(--bg-input-soft); }
+
+.kf-sidebar__logo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.kf-sidebar__collapse {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--canvas-fg-soft);
+  border: 0;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+.kf-sidebar__collapse:hover {
+  background: var(--canvas-overlay);
+  color: var(--canvas-fg);
+}
 
 .kf-sidebar__logo {
   display: flex;
@@ -55,6 +191,7 @@
   font-weight: 800;
   letter-spacing: -0.01em;
   font-size: 16px;
+  min-width: 0;
 }
 .kf-sidebar__logo-mark {
   display: grid;
@@ -75,11 +212,12 @@
   gap: 10px;
   padding: 8px 12px;
   border-radius: 8px;
-  color: rgba(255,255,255,0.85);
+  color: var(--canvas-fg-soft);
   text-decoration: none;
   font-size: 14px;
   font-weight: 600;
-  transition: background var(--dur-fast) var(--ease-out);
+  transition: background var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
   background: transparent;
   border: 0;
   text-align: left;
@@ -87,12 +225,12 @@
   font-family: inherit;
 }
 .kf-sidebar__navlink:hover {
-  background: rgba(255,255,255,0.10);
-  color: #fff;
+  background: var(--canvas-overlay);
+  color: var(--canvas-fg);
 }
 .kf-sidebar__navlink.is-active {
-  background: rgba(255,255,255,0.16);
-  color: #fff;
+  background: var(--canvas-overlay-strong);
+  color: var(--canvas-fg);
 }
 
 .kf-sidebar__section {
@@ -110,7 +248,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0 12px;
-  color: rgba(255,255,255,0.55);
+  color: var(--canvas-fg-faint);
   margin: 8px 0 4px;
 }
 
@@ -123,13 +261,13 @@
   padding: 6px 10px;
   border-radius: 8px;
   text-decoration: none;
-  color: rgba(255,255,255,0.85);
+  color: var(--canvas-fg-soft);
   font-size: 13px;
   font-weight: 500;
-  transition: background var(--dur-fast);
+  transition: background var(--dur-fast), color var(--dur-fast);
 }
-.kf-sidebar__board:hover { background: rgba(255,255,255,0.10); color: #fff; }
-.kf-sidebar__board.is-active { background: rgba(255,255,255,0.18); color: #fff; }
+.kf-sidebar__board:hover { background: var(--canvas-overlay); color: var(--canvas-fg); }
+.kf-sidebar__board.is-active { background: var(--canvas-overlay-strong); color: var(--canvas-fg); }
 .kf-sidebar__board-mark {
   width: 22px; height: 18px; border-radius: 4px; flex-shrink: 0;
 }
@@ -139,7 +277,7 @@
 
 .kf-sidebar__skeleton {
   height: 28px; border-radius: 8px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.10), rgba(255,255,255,0.06));
+  background: linear-gradient(90deg, var(--canvas-overlay), var(--canvas-overlay-strong), var(--canvas-overlay));
   background-size: 200% 100%;
   animation: kfshim 1.4s linear infinite;
   margin: 0 8px;
@@ -147,30 +285,33 @@
 @keyframes kfshim { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
 .kf-sidebar__empty {
-  font-size: 12px; color: rgba(255,255,255,0.55); padding: 8px 12px;
+  font-size: 12px; color: var(--canvas-fg-faint); padding: 8px 12px;
 }
 
 .kf-sidebar__bottom {
   margin-top: auto; padding-top: 10px;
-  border-top: 1px solid rgba(255,255,255,0.10);
+  border-top: 1px solid var(--canvas-hairline);
 }
+.kf-sidebar__nav .kf-appearance { width: 100%; }
+.kf-sidebar__nav .kf-appearance > button { width: 100%; }
 .kf-sidebar__user {
   display: flex; gap: 10px; align-items: center; padding: 4px 8px;
 }
 .kf-sidebar__user-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .kf-sidebar__user-name {
   font-size: 13px; font-weight: 600;
+  color: var(--canvas-fg);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .kf-sidebar__logout {
   background: none; border: 0; padding: 0;
-  color: rgba(255,255,255,0.55);
+  color: var(--canvas-fg-faint);
   font-size: 12px;
   text-align: left;
   cursor: pointer;
   font-family: inherit;
 }
-.kf-sidebar__logout:hover { color: #fff; }
+.kf-sidebar__logout:hover { color: var(--canvas-fg); }
 
 .kf-avatar {
   width: 32px; height: 32px;
@@ -192,16 +333,16 @@
   display: flex; align-items: center; gap: 10px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.10);
+  background: var(--canvas-overlay);
+  color: var(--canvas-fg);
+  border: 1px solid var(--canvas-hairline);
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
   font-family: inherit;
   text-align: left;
 }
-.kf-wsswitch__btn:hover { background: rgba(255,255,255,0.14); }
+.kf-wsswitch__btn:hover { background: var(--canvas-overlay-strong); }
 .kf-wsswitch__name {
   flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -270,23 +411,26 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 32px 28px 64px;
-  color: var(--fg-on-accent);
+  color: var(--canvas-fg);
 }
 .kf-page__head {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 16px;
   margin-bottom: 24px;
+  /* Leave room for the floating ProfileMenu avatar so right-edge actions
+     ("+ New board", filters, etc.) don't overlap it. */
+  padding-right: var(--kf-profile-reserve, 0px);
 }
 .kf-page__head h1 {
   margin: 0;
   font-size: 28px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #fff;
+  color: var(--canvas-fg);
 }
 .kf-page__sub {
   margin: 4px 0 0;
-  color: rgba(255,255,255,0.75);
+  color: var(--canvas-fg-soft);
   font-size: 14px;
 }
 
@@ -298,7 +442,7 @@
 }
 .kf-page__section-title {
   display: inline-flex; align-items: center; gap: 8px;
-  color: #fff;
+  color: var(--canvas-fg);
   font-size: 18px;
   font-weight: 700;
   text-decoration: none;
@@ -306,7 +450,7 @@
 .kf-page__section-title:hover { text-decoration: underline; }
 
 .kf-icon { font-size: 16px; }
-.kf-link { color: rgba(255,255,255,0.92); text-decoration: underline; }
+.kf-link { color: var(--canvas-fg); text-decoration: underline; }
 
 .kf-board-grid {
   display: grid;
@@ -314,33 +458,36 @@
   gap: 14px;
 }
 
+/* Cards are always white — Trello-style — regardless of theme/accent. */
 .kf-board-card {
   position: relative;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   overflow: hidden;
-  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  transition: transform var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
 }
 .kf-board-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  background: #FAFBFC;
 }
 .kf-board-card__link {
   display: block; text-decoration: none; color: inherit;
 }
 .kf-board-card__cover {
   height: 56px;
-  background: var(--card-gradient, linear-gradient(135deg, #6366f1, #ec4899));
+  background: linear-gradient(135deg, var(--accent), var(--accent-600));
 }
 .kf-board-card__body { padding: 14px 16px; }
 .kf-board-card__title {
-  margin: 0 0 4px; color: #fff;
+  margin: 0 0 4px; color: #172B4D;
   font-size: 16px; font-weight: 700;
 }
 .kf-board-card__desc {
   margin: 0;
-  color: rgba(255,255,255,0.72);
+  color: #6B778C;
   font-size: 13px;
   line-height: 1.45;
   display: -webkit-box;
@@ -362,22 +509,22 @@
 .kf-board-card__delete:hover { background: rgba(220, 38, 38, 0.9); }
 .kf-board-card--skeleton {
   height: 132px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.10), rgba(255,255,255,0.06));
+  background: linear-gradient(90deg, var(--canvas-overlay), var(--canvas-overlay-strong), var(--canvas-overlay));
   background-size: 200% 100%;
   animation: kfshim 1.4s linear infinite;
 }
 
 .kf-empty {
-  background: rgba(255,255,255,0.06);
-  border: 1px dashed rgba(255,255,255,0.20);
+  background: var(--canvas-overlay);
+  border: 1px dashed var(--canvas-hairline);
   border-radius: 12px;
   padding: 28px;
   text-align: center;
-  color: rgba(255,255,255,0.85);
+  color: var(--canvas-fg-soft);
 }
 .kf-empty--inline { padding: 16px; text-align: left; }
-.kf-empty__title { font-size: 16px; font-weight: 700; margin: 0 0 4px; color: #fff; }
-.kf-empty__hint { margin: 4px 0 0; color: rgba(255,255,255,0.65); font-size: 13px; }
+.kf-empty__title { font-size: 16px; font-weight: 700; margin: 0 0 4px; color: var(--canvas-fg); }
+.kf-empty__hint { margin: 4px 0 0; color: var(--canvas-fg-soft); font-size: 13px; }
 .kf-error {
   background: rgba(239,68,68,0.10);
   border: 1px solid rgba(239,68,68,0.32);
@@ -398,17 +545,17 @@
   transition: background var(--dur-fast) var(--ease-out);
 }
 .kf-btn--primary {
-  background: #fff; color: var(--accent);
+  background: var(--accent); color: #fff;
 }
-.kf-btn--primary:hover { background: rgba(255,255,255,0.92); }
+.kf-btn--primary:hover { background: var(--accent-600); }
 .kf-btn--primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .kf-btn--ghost {
-  background: rgba(255,255,255,0.10);
-  color: #fff;
-  border-color: rgba(255,255,255,0.16);
+  background: var(--canvas-overlay);
+  color: var(--canvas-fg);
+  border-color: var(--canvas-hairline);
 }
-.kf-btn--ghost:hover { background: rgba(255,255,255,0.18); }
-.kf-btn--ghost.is-active { background: rgba(255,255,255,0.22); }
+.kf-btn--ghost:hover { background: var(--canvas-overlay-strong); }
+.kf-btn--ghost.is-active { background: var(--canvas-overlay-strong); }
 
 /* ================================================================
    Modal
@@ -500,10 +647,10 @@
 .kf-feed--empty {
   padding: 32px;
   text-align: center;
-  background: rgba(255,255,255,0.05);
-  border: 1px dashed rgba(255,255,255,0.16);
+  background: var(--canvas-overlay);
+  border: 1px dashed var(--canvas-hairline);
   border-radius: 12px;
-  color: rgba(255,255,255,0.85);
+  color: var(--canvas-fg-soft);
 }
 .kf-feed--error { padding: 16px; }
 
@@ -512,7 +659,7 @@
   padding: 10px 12px;
   border-radius: 10px;
 }
-.kf-act:hover { background: rgba(255,255,255,0.04); }
+.kf-act:hover { background: var(--canvas-overlay); }
 .kf-act__avatar {
   width: 32px; height: 32px;
   border-radius: 50%;
@@ -523,35 +670,35 @@
   font-weight: 700;
 }
 .kf-act__avatar--skeleton {
-  background: rgba(255,255,255,0.10);
+  background: var(--canvas-overlay-strong);
   animation: kfshim 1.4s linear infinite;
   background-size: 200% 100%;
 }
 .kf-act__body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .kf-act__line {
   margin: 0;
-  color: rgba(255,255,255,0.92);
+  color: var(--canvas-fg);
   font-size: 14px;
   line-height: 1.45;
 }
-.kf-act__line strong { color: #fff; font-weight: 700; }
+.kf-act__line strong { color: var(--canvas-fg); font-weight: 700; }
 .kf-act__subject {
-  color: #fff;
+  color: var(--canvas-fg);
   text-decoration: underline;
   font-style: normal;
 }
 .kf-act__meta {
   margin: 0;
-  color: rgba(255,255,255,0.55);
+  color: var(--canvas-fg-faint);
   font-size: 12px;
 }
 .kf-act__sep { margin: 0 6px; opacity: 0.6; }
-.kf-act__link { color: rgba(255,255,255,0.85); text-decoration: underline; }
+.kf-act__link { color: var(--canvas-fg-soft); text-decoration: underline; }
 .kf-act__line-skel,
 .kf-act__meta-skel {
   display: block;
   height: 12px;
-  background: rgba(255,255,255,0.10);
+  background: var(--canvas-overlay-strong);
   border-radius: 4px;
   background-size: 200% 100%;
   animation: kfshim 1.4s linear infinite;
@@ -561,13 +708,13 @@
 
 .kf-act__workspace-banner {
   display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--canvas-overlay);
+  border: 1px solid var(--canvas-hairline);
   border-radius: 8px;
   padding: 6px 12px;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: var(--canvas-fg);
   margin-top: 8px;
 }
 
@@ -583,25 +730,34 @@
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 18px;
+  /* Reserve room on the right for the fixed ProfileMenu avatar so
+     "Activity" / Appearance buttons don't sit under it. */
+  padding-right: calc(18px + var(--kf-profile-reserve, 0px));
   gap: 12px;
-  background: rgba(0,0,0,0.20);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: var(--canvas-overlay);
+  border-bottom: 1px solid var(--canvas-hairline);
+  /* Raise the header into its own stacking context so absolutely-positioned
+     popovers (Appearance, Activity) sit above the kanban cards below. dnd-kit
+     applies inline transform to every card, which silently creates a stacking
+     context per card and otherwise wins the paint order. */
+  position: relative;
+  z-index: 60;
 }
 .kf-board-page__title {
   background: transparent;
   border: 0;
   padding: 4px 8px;
   border-radius: 6px;
-  color: #fff;
+  color: var(--canvas-fg);
   font-size: 18px;
   font-weight: 700;
   font-family: inherit;
   width: 100%;
   max-width: 480px;
 }
-.kf-board-page__title:hover { background: rgba(255,255,255,0.10); }
-.kf-board-page__title:focus { background: rgba(255,255,255,0.14); outline: 0; }
-.kf-board-page__actions { display: flex; gap: 8px; flex-shrink: 0; }
+.kf-board-page__title:hover { background: var(--canvas-overlay); }
+.kf-board-page__title:focus { background: var(--canvas-overlay-strong); outline: 0; }
+.kf-board-page__actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
 
 .kf-board-page__body {
   flex: 1; min-height: 0; display: flex;
@@ -611,8 +767,8 @@
 .kf-board-page__activity {
   width: 360px;
   flex-shrink: 0;
-  border-left: 1px solid rgba(255,255,255,0.08);
-  background: rgba(0,0,0,0.20);
+  border-left: 1px solid var(--canvas-hairline);
+  background: var(--canvas-overlay);
   padding: 16px;
   overflow-y: auto;
 }
@@ -621,19 +777,437 @@
   margin-bottom: 12px;
 }
 .kf-board-page__activity-head h2 {
-  margin: 0; color: #fff; font-size: 16px; font-weight: 700;
+  margin: 0; color: var(--canvas-fg); font-size: 16px; font-weight: 700;
 }
 .kf-board-page__activity-close {
-  background: transparent; border: 0; color: rgba(255,255,255,0.7);
+  background: transparent; border: 0; color: var(--canvas-fg-soft);
   font-size: 22px; line-height: 1;
   cursor: pointer; padding: 0 6px;
 }
-.kf-board-page__activity-close:hover { color: #fff; }
+.kf-board-page__activity-close:hover { color: var(--canvas-fg); }
 
 .kf-board-page__loading,
 .kf-board-page__missing {
   display: grid; place-items: center;
   flex: 1;
-  color: #fff;
+  color: var(--canvas-fg);
   gap: 12px;
 }
+
+/* ================================================================
+   Toast / notification stack — fixed bottom-right of viewport
+   ================================================================ */
+.kf-toast-host {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 360px;
+  pointer-events: none;
+}
+.kf-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(20, 25, 32, 0.96);
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  animation: kf-toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes kf-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.kf-toast--success { border-left: 3px solid var(--accent); }
+.kf-toast--error   { border-left: 3px solid #E5484D; }
+.kf-toast--info    { border-left: 3px solid #4FA3FF; }
+.kf-toast__body { flex: 1; min-width: 0; }
+.kf-toast__title { font-size: 13px; font-weight: 600; line-height: 1.35; }
+.kf-toast__sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.kf-toast__close {
+  background: transparent;
+  border: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.kf-toast__close:hover { color: #fff; }
+
+/* ================================================================
+   Members panel + invite form (workspace view)
+   ================================================================ */
+.kf-members__list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kf-members__row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff;
+}
+.kf-members__remove {
+  /* Hidden until hover so the row stays calm when there's nothing to do. */
+  opacity: 0;
+  transition: opacity var(--dur-fast, 150ms);
+  color: rgba(255, 255, 255, 0.85);
+}
+.kf-members__row:hover .kf-members__remove,
+.kf-members__remove:focus-visible {
+  opacity: 1;
+}
+.kf-members__remove:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.kf-members__remove-spacer { display: inline-block; min-width: 1px; }
+.kf-members__avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent-100);
+  color: var(--accent-600);
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.kf-members__name { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.kf-members__you { color: rgba(255, 255, 255, 0.6); font-weight: 500; }
+.kf-members__email {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 400;
+  margin-top: 1px;
+}
+.kf-members__role {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+.kf-members__role--admin {
+  background: var(--accent-100);
+  color: var(--accent-600);
+}
+.kf-members__role--owner {
+  background: rgba(252, 200, 107, 0.18);
+  color: #FFD78A;
+}
+
+.kf-invite-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.kf-invite-form__row {
+  display: grid;
+  grid-template-columns: 1fr 140px auto;
+  gap: 8px;
+}
+.kf-invite-form .kf-input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 14px;
+}
+.kf-invite-form .kf-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+.kf-invite-form .kf-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+/* Native <select> options inherit the field's color/background by default
+   on Windows, which would render white-text-on-white when this menu opens.
+   Force solid theme-aware colors so the dropdown is legible. */
+.kf-invite-form .kf-input option {
+  background: var(--bg-app);
+  color: var(--fg-1);
+}
+.kf-invite-form__role { width: 100%; }
+.kf-invite-form__error {
+  margin: 0;
+  font-size: 12px;
+  color: #ffb4b8;
+}
+
+.kf-invites {
+  margin-top: 12px;
+}
+.kf-invites__title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 8px;
+}
+.kf-invites__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kf-invites__row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+}
+.kf-invites__email { font-weight: 500; }
+.kf-invites__role {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+}
+.kf-btn--sm { padding: 5px 10px; font-size: 12px; }
+
+/* ================================================================
+   Invite accept page (full-bleed, public)
+   ================================================================ */
+.kf-invite-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--bg-board);
+  padding: 24px;
+}
+.kf-invite-card {
+  background: #fff;
+  color: var(--fg-1);
+  width: 100%;
+  max-width: 440px;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+.kf-invite-card__eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-600);
+  margin-bottom: 8px;
+}
+.kf-invite-card h1 {
+  margin: 0 0 8px 0;
+  font-size: 22px;
+  line-height: 1.3;
+  color: var(--fg-1);
+}
+.kf-invite-card__sub {
+  margin: 0 0 18px 0;
+  color: var(--fg-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.kf-invite-card__email {
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.kf-invite-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.kf-invite-card__actions .kf-btn--primary {
+  background: var(--accent);
+  color: #fff;
+}
+.kf-invite-card__actions .kf-btn--primary:hover {
+  background: var(--accent-600);
+}
+.kf-invite-card__actions .kf-btn--ghost {
+  background: transparent;
+  color: var(--fg-1);
+  border: 1px solid var(--hairline, rgba(0, 0, 0, 0.1));
+}
+.kf-invite-card__hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+
+/* ================================================================
+   RichTextEditor (Tiptap)
+   ================================================================ */
+.rte {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--bg-app);
+  color: var(--fg-1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.rte--loading { min-height: 220px; }
+
+.rte__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--bg-input-soft);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.rte__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  padding: 5px 7px;
+  color: var(--fg-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+.rte__btn:hover { background: var(--bg-chip); color: var(--fg-1); }
+.rte__btn.is-active { background: var(--bg-chip); color: var(--fg-1); }
+.rte__btn--text { padding: 5px 10px; min-width: 110px; justify-content: space-between; }
+.rte__chevron { font-size: 9px; opacity: 0.7; }
+
+.rte__sep {
+  width: 1px;
+  background: var(--hairline);
+  margin: 0 4px;
+}
+
+.rte__menu { position: relative; }
+.rte__dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  min-width: 180px;
+  background: var(--bg-app);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(9,30,66,0.18);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+.rte__dropdown button {
+  background: transparent;
+  border: 0;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--fg-1);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.rte__dropdown button:hover { background: var(--bg-input-soft); }
+.rte__dropdown button.is-active { background: var(--accent-100); color: var(--accent-600); }
+
+.rte__content {
+  padding: 12px 14px;
+  min-height: 160px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--fg-1);
+}
+.rte__content .ProseMirror { outline: none; min-height: 140px; }
+.rte__content .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--fg-3);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.rte__content p { margin: 0 0 8px; }
+.rte__content p:last-child { margin: 0; }
+.rte__content h1 { font-size: 22px; margin: 12px 0 6px; font-weight: 700; color: var(--fg-1); }
+.rte__content h2 { font-size: 18px; margin: 10px 0 4px; font-weight: 700; color: var(--fg-1); }
+.rte__content h3 { font-size: 15px; margin: 8px 0 4px; font-weight: 700; color: var(--fg-1); }
+.rte__content ul, .rte__content ol { margin: 4px 0 8px 22px; padding: 0; }
+.rte__content blockquote {
+  border-left: 3px solid var(--hairline);
+  padding-left: 10px;
+  color: var(--fg-2);
+  margin: 6px 0;
+}
+.rte__content code {
+  background: var(--bg-input-soft);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 0.92em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.rte__content pre {
+  background: var(--bg-input-soft);
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+}
+.rte__content a { color: var(--accent); text-decoration: underline; }
+.rte__content img { max-width: 100%; border-radius: 6px; margin: 6px 0; }
+.rte__content hr { border: 0; border-top: 1px solid var(--hairline); margin: 12px 0; }
+
+/* Renderer for already-saved HTML descriptions (non-editing mode) */
+.rte-rendered { color: inherit; }
+.rte-rendered p { margin: 0 0 8px; }
+.rte-rendered p:last-child { margin: 0; }
+.rte-rendered h1, .rte-rendered h2, .rte-rendered h3 {
+  font-weight: 700;
+  color: var(--fg-1);
+  margin: 8px 0 4px;
+}
+.rte-rendered h1 { font-size: 20px; }
+.rte-rendered h2 { font-size: 17px; }
+.rte-rendered h3 { font-size: 14px; }
+.rte-rendered ul, .rte-rendered ol { margin: 4px 0 8px 22px; padding: 0; }
+.rte-rendered blockquote {
+  border-left: 3px solid var(--hairline);
+  padding-left: 10px;
+  color: var(--fg-2);
+}
+.rte-rendered code {
+  background: var(--bg-input-soft);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 0.92em;
+}
+.rte-rendered pre { background: var(--bg-input-soft); border-radius: 6px; padding: 8px 10px; }
+.rte-rendered a { color: var(--accent); text-decoration: underline; }
+.rte-rendered img { max-width: 100%; border-radius: 6px; }

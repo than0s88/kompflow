@@ -1,5 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import {
+  Link,
+  Navigate,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import SocialButtons from '../components/SocialButtons';
 import '../styles/app.css';
@@ -7,14 +12,24 @@ import '../styles/app.css';
 export default function Register() {
   const { user, register } = useAuth();
   const navigate = useNavigate();
+  const [search] = useSearchParams();
+  const inviteToken = search.get('invite');
+  const inviteEmail = search.get('email');
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(inviteEmail ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) {
+    return (
+      <Navigate
+        to={inviteToken ? `/invite/${inviteToken}` : '/dashboard'}
+        replace
+      />
+    );
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -22,7 +37,9 @@ export default function Register() {
     setError(null);
     try {
       await register(name, email, password);
-      navigate('/dashboard', { replace: true });
+      navigate(inviteToken ? `/invite/${inviteToken}` : '/dashboard', {
+        replace: true,
+      });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string | string[] } } })?.response
         ?.data?.message;

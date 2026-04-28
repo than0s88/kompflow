@@ -52,11 +52,7 @@ export default function ActivityItem({ activity }: Props) {
           >
             {activity.workspace.name}
           </Link>{' '}
-          {activity.workspace.visibility === 'private' ? (
-            <span aria-hidden>🔒</span>
-          ) : (
-            <span aria-hidden>🌐</span>
-          )}
+          <span aria-hidden>👥</span>
         </p>
       </div>
     </li>

@@ -4,6 +4,7 @@ import AppShell from './components/layout/AppShell';
 import BoardView from './pages/BoardView';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
+import InviteAccept from './pages/InviteAccept';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import WorkspaceActivity from './pages/WorkspaceActivity';
@@ -16,6 +17,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/invite/:token" element={<InviteAccept />} />
 
       {/* Authenticated routes — wrapped in AppShell (sidebar + main) */}
       <Route

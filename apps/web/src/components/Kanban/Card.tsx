@@ -11,8 +11,15 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
 } from 'react';
+import { useAuth } from '../../auth/AuthContext';
 import { api } from '../../lib/api';
-import '../../styles/app.css';
+import {
+  TEAMMATE_POOL,
+  dueDateTone,
+  ornamentsOf,
+  shortDueLabel,
+} from '../../lib/card-ornaments';
+import { isCiphertext } from '../../lib/crypto';
 
 interface Props {
   card: Card;
@@ -21,8 +28,21 @@ interface Props {
   onOpen?: (cardId: string) => void;
 }
 
-export default function KanbanCard({ card, boardId, dragging = false, onOpen }: Props) {
+function initialsFor(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+export default function KanbanCard({
+  card,
+  boardId,
+  dragging = false,
+  onOpen,
+}: Props) {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(card.title);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -128,7 +148,28 @@ export default function KanbanCard({ card, boardId, dragging = false, onOpen }: 
     );
   }
 
-  const dragClass = dragging || sortable.isDragging ? ' is-dragging' : '';
+  // `dragging` = this is the floating DragOverlay clone (show it crisply).
+  // `sortable.isDragging` = this is the original card being dragged (hide it,
+  // otherwise we'd have two copies on screen at once).
+  const dragClass = dragging
+    ? ' is-dragging'
+    : sortable.isDragging
+      ? ' is-drag-source'
+      : '';
+  const orn = ornamentsOf(card);
+  const description = card.description ?? '';
+  const hasDescription = description.length > 0;
+  const isEncrypted = hasDescription && isCiphertext(description);
+  const dueTone = orn.dueDate ? dueDateTone(orn.dueDate) : null;
+  const dueLabel = orn.dueDate ? shortDueLabel(orn.dueDate) : null;
+  const meTeammates = orn.memberIds
+    .map((id) =>
+      id === 'me'
+        ? null
+        : TEAMMATE_POOL.find((t) => t.id === id) ?? null,
+    )
+    .filter((t): t is (typeof TEAMMATE_POOL)[number] => t !== null);
+  const includeMe = orn.memberIds.includes('me');
 
   return (
     <div
@@ -141,14 +182,112 @@ export default function KanbanCard({ card, boardId, dragging = false, onOpen }: 
         dragging || sortable.isDragging
           ? undefined
           : (e) => {
-              // Don't open the modal if a child (edit/delete button) handled the click.
               if (e.defaultPrevented) return;
               onOpen?.(card.id);
             }
       }
     >
+      {orn.cover ? (
+        <div className="card-cover" style={{ background: orn.cover }} />
+      ) : null}
+
+      {orn.labels.length > 0 ? (
+        <div className="card-labels">
+          {orn.labels.map((color, i) => (
+            <div
+              key={i}
+              className="card-label"
+              style={{ background: color }}
+            />
+          ))}
+        </div>
+      ) : null}
+
       <div className="card-title">{card.title}</div>
-      {!dragging && (
+
+      <div className="card-meta">
+        {isEncrypted ? (
+          <span className="card-meta-icon" title="Encrypted">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <rect x="5" y="11" width="14" height="9" rx="2" />
+              <path d="M8 11V7a4 4 0 018 0v4" />
+            </svg>
+          </span>
+        ) : null}
+
+        {dueTone && dueLabel ? (
+          <span
+            className={'card-meta-icon due ' + dueTone}
+            title={`Due ${dueLabel}`}
+          >
+            <svg
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+            >
+              <rect x="3" y="5" width="18" height="16" rx="2" />
+              <path d="M3 10h18M8 3v4M16 3v4" />
+            </svg>
+            {dueLabel}
+          </span>
+        ) : null}
+
+        {hasDescription && !isEncrypted ? (
+          <span
+            className="card-meta-icon has-desc"
+            title="This card has a description"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <line x1="4" y1="7" x2="20" y2="7" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <line x1="4" y1="17" x2="14" y2="17" />
+            </svg>
+          </span>
+        ) : null}
+
+        {(meTeammates.length > 0 || (includeMe && user)) ? (
+          <div className="card-assignees">
+            {meTeammates.map((t) => (
+              <div
+                key={t.id}
+                className="avatar"
+                title={t.name}
+                style={{ background: t.color }}
+              >
+                {t.initials}
+              </div>
+            ))}
+            {includeMe && user ? (
+              <div
+                className="avatar"
+                title="You"
+                style={{ background: 'rgb(0, 121, 191)' }}
+              >
+                {initialsFor(user.name)}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      {!dragging ? (
         <>
           <button
             type="button"
@@ -160,7 +299,16 @@ export default function KanbanCard({ card, boardId, dragging = false, onOpen }: 
             }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M12 20h9" />
               <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
             </svg>
@@ -170,6 +318,7 @@ export default function KanbanCard({ card, boardId, dragging = false, onOpen }: 
             onClick={handleDelete}
             onPointerDown={(e) => e.stopPropagation()}
             aria-label="Delete card"
+            className="card-delete-btn"
             style={{
               position: 'absolute',
               bottom: 4,
@@ -184,12 +333,11 @@ export default function KanbanCard({ card, boardId, dragging = false, onOpen }: 
               fontSize: 14,
               lineHeight: 1,
             }}
-            className="card-delete-btn"
           >
             ×
           </button>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

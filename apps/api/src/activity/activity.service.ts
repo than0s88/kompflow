@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { ActivityRecord, ActivityVerb } from '@kanban/shared';
+import type {
+  ActivityEntityType,
+  ActivityRecord,
+  ActivityVerb,
+} from '@kanban/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { PusherService } from '../pusher/pusher.service';
 
@@ -8,7 +12,7 @@ interface LogActivityInput {
   boardId?: string | null;
   actorId: string;
   verb: ActivityVerb;
-  entityType: 'workspace' | 'board' | 'column' | 'card';
+  entityType: ActivityEntityType;
   entityId: string;
   entityTitle: string;
   metadata?: Record<string, unknown>;
@@ -46,7 +50,7 @@ export class ActivityService {
           select: { id: true, name: true, email: true, avatarUrl: true },
         },
         board: { select: { id: true, title: true } },
-        workspace: { select: { id: true, name: true, visibility: true } },
+        workspace: { select: { id: true, name: true } },
       },
     });
 
@@ -93,7 +97,7 @@ export class ActivityService {
           select: { id: true, name: true, email: true, avatarUrl: true },
         },
         board: { select: { id: true, title: true } },
-        workspace: { select: { id: true, name: true, visibility: true } },
+        workspace: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: limit + 1,
@@ -126,7 +130,7 @@ type ActivityRow = {
     avatarUrl: string | null;
   };
   board: { id: string; title: string } | null;
-  workspace: { id: string; name: string; visibility: string };
+  workspace: { id: string; name: string };
 };
 
 function toRecord(row: ActivityRow): ActivityRecord {
@@ -136,7 +140,7 @@ function toRecord(row: ActivityRow): ActivityRecord {
     boardId: row.boardId,
     actorId: row.actorId,
     verb: row.verb as ActivityVerb,
-    entityType: row.entityType as ActivityRecord['entityType'],
+    entityType: row.entityType as ActivityEntityType,
     entityId: row.entityId,
     entityTitle: row.entityTitle,
     metadata: (row.metadata as Record<string, unknown> | null) ?? null,
@@ -151,7 +155,6 @@ function toRecord(row: ActivityRow): ActivityRecord {
     workspace: {
       id: row.workspace.id,
       name: row.workspace.name,
-      visibility: row.workspace.visibility as 'private' | 'workspace',
     },
   };
 }

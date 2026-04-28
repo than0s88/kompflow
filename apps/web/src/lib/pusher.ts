@@ -21,6 +21,7 @@ export function getPusher(): Pusher {
   const options: PusherOptions = {
     cluster,
     forceTLS,
+    disableStats: true,
     channelAuthorization: {
       transport: 'ajax',
       endpoint: '/api/pusher/auth',
@@ -43,7 +44,10 @@ export function getPusher(): Pusher {
     options.wsHost = host;
     options.wsPort = port;
     options.wssPort = port;
-    options.enabledTransports = ['ws', 'wss'];
+    options.enabledTransports = forceTLS ? ['wss'] : ['ws'];
+    // Soketi serves WS at the bare /app/{key} path — make sure pusher-js
+    // doesn't append the default httpPath ("/pusher") to the WS URL.
+    options.wsPath = '';
   }
 
   pusher = new Pusher(key, options);

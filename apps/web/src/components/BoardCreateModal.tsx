@@ -1,6 +1,7 @@
 import type { Board, CreateBoardDto } from '@kanban/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 
@@ -38,7 +39,7 @@ export default function BoardCreateModal({ workspaceId, onClose }: Props) {
     });
   }
 
-  return (
+  return createPortal(
     <div
       className="kf-modal__backdrop"
       role="dialog"
@@ -108,6 +109,7 @@ export default function BoardCreateModal({ workspaceId, onClose }: Props) {
           </footer>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

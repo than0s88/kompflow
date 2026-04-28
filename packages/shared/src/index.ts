@@ -7,12 +7,20 @@ export interface User {
   updatedAt: string;
 }
 
+export interface CardOrnaments {
+  cover: string | null;
+  labels: string[];
+  dueDate: string | null;
+  memberIds: string[];
+}
+
 export interface Card {
   id: string;
   columnId: string;
   title: string;
   description: string | null;
   position: number;
+  ornaments?: CardOrnaments | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,14 +57,11 @@ export interface BoardMember {
   user?: Pick<User, 'id' | 'name' | 'email'>;
 }
 
-export type WorkspaceVisibility = 'private' | 'workspace';
-
 export interface Workspace {
   id: string;
   name: string;
   slug: string;
   ownerId: string;
-  visibility: WorkspaceVisibility;
   createdAt: string;
   updatedAt: string;
   boards?: Board[];
@@ -79,7 +84,17 @@ export type ActivityVerb =
   | 'added'
   | 'moved'
   | 'transferred'
-  | 'removed';
+  | 'removed'
+  | 'invited'
+  | 'joined';
+
+export type ActivityEntityType =
+  | 'workspace'
+  | 'board'
+  | 'column'
+  | 'card'
+  | 'invitation'
+  | 'member';
 
 export interface ActivityRecord {
   id: string;
@@ -87,7 +102,7 @@ export interface ActivityRecord {
   boardId: string | null;
   actorId: string;
   verb: ActivityVerb;
-  entityType: 'workspace' | 'board' | 'column' | 'card';
+  entityType: ActivityEntityType;
   entityId: string;
   entityTitle: string;
   metadata: Record<string, unknown> | null;
@@ -102,8 +117,39 @@ export interface ActivityRecord {
   workspace: {
     id: string;
     name: string;
-    visibility: WorkspaceVisibility;
   };
+}
+
+export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+
+export interface WorkspaceInvitation {
+  id: string;
+  workspaceId: string;
+  email: string;
+  role: 'admin' | 'member';
+  status: InvitationStatus;
+  expiresAt: string;
+  acceptedAt: string | null;
+  createdAt: string;
+  invitedBy?: Pick<User, 'id' | 'name' | 'email' | 'avatarUrl'>;
+}
+
+export interface InvitationPreview {
+  workspaceName: string;
+  inviterName: string;
+  email: string;
+  role: 'admin' | 'member';
+  expiresAt: string;
+  status: InvitationStatus;
+}
+
+export interface CreateInvitationDto {
+  email: string;
+  role?: 'admin' | 'member';
+}
+
+export interface AcceptInvitationDto {
+  token: string;
 }
 
 // API request/response DTOs
@@ -121,12 +167,10 @@ export interface LoginDto {
 
 export interface CreateWorkspaceDto {
   name: string;
-  visibility?: WorkspaceVisibility;
 }
 
 export interface UpdateWorkspaceDto {
   name?: string;
-  visibility?: WorkspaceVisibility;
 }
 
 export interface CreateBoardDto {
@@ -156,6 +200,7 @@ export interface CreateCardDto {
 export interface UpdateCardDto {
   title?: string;
   description?: string;
+  ornaments?: CardOrnaments;
 }
 
 export interface ReorderDto {

@@ -80,7 +80,7 @@ export default function Dashboard() {
             <header className="kf-page__section-head">
               <Link to={`/workspaces/${ws.id}`} className="kf-page__section-title">
                 <span className="kf-icon" aria-hidden>
-                  {ws.visibility === 'private' ? '🔒' : '🌐'}
+                  👥
                 </span>
                 {ws.name}
               </Link>
