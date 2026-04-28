@@ -35,11 +35,14 @@ EXPOSE 3001
 
 # Inline boot sequence:
 #   1. Apply Prisma schema with db push (idempotent — re-running is safe).
-#   2. Run the demo seeder (idempotent for users + workspace; replaces demo
-#      boards each boot so reviewers always see a freshly-populated state).
-#      Failures are tolerated (`|| true`) so an already-seeded DB or transient
-#      error never blocks the API from starting.
+#   2. Run the demo seeder in SAFE mode. Always upserts users + workspace,
+#      but ONLY plants boards/activity when the workspace has zero boards.
+#      So a fresh DB gets demo data on first boot; restarts after the boss
+#      has clicked around leave their work intact.
+#      For a full reset, run manually: docker compose exec api pnpm db:seed
+#      Failures tolerated (`|| true`) so a transient seed error never blocks
+#      the API from starting.
 #   3. Launch the NestJS server.
 # Inlined here instead of using a shell script so Windows hosts don't trip on
 # CRLF line endings in a checked-in *.sh file.
-CMD ["sh", "-c", "echo '[api] applying database schema...' && pnpm exec prisma db push --skip-generate --accept-data-loss && echo '[api] seeding demo data...' && (pnpm exec prisma db seed || echo '[api] seed skipped/failed — continuing') && echo '[api] starting NestJS...' && exec node dist/main"]
+CMD ["sh", "-c", "echo '[api] applying database schema...' && pnpm exec prisma db push --skip-generate --accept-data-loss && echo '[api] seeding demo data (safe mode)...' && (KOMPFLOW_SEED_MODE=safe pnpm exec prisma db seed || echo '[api] seed skipped/failed — continuing') && echo '[api] starting NestJS...' && exec node dist/main"]

@@ -329,8 +329,30 @@ const BOARDS: BoardSeed[] = [
   },
 ];
 
+/**
+ * "safe" mode (set via KOMPFLOW_SEED_MODE=safe) — used by the API container's
+ * boot entrypoint. It guarantees the seed never destroys data:
+ *
+ *   1. Users + workspace are always upserted (idempotent, no destruction).
+ *   2. Boards + activity are only seeded if the demo workspace currently has
+ *      ZERO boards. So a fresh DB gets demo data on first boot; subsequent
+ *      reboots after the boss has clicked around leave their work alone.
+ *
+ * Default mode (no env, or `KOMPFLOW_SEED_MODE=full`) is the original
+ * destructive refresh — useful when you want a clean reset:
+ *
+ *   docker compose exec api pnpm --filter @kanban/api db:seed
+ */
+const SAFE_MODE = process.env.KOMPFLOW_SEED_MODE === 'safe';
+
 async function seed() {
-  console.log('🌱  Seeding Kompflow demo data…');
+  if (SAFE_MODE) {
+    console.log(
+      '🌱  Seeding Kompflow demo data (safe mode — preserves user changes)…',
+    );
+  } else {
+    console.log('🌱  Seeding Kompflow demo data (full reset)…');
+  }
 
   const [boss, member] = await Promise.all([
     upsertUser(BOSS),
@@ -367,8 +389,27 @@ async function seed() {
   });
   console.log(`✓ workspace    ${workspace.name} (${workspace.slug})`);
 
-  // Wipe existing demo boards in this workspace before re-seeding so
-  // re-running the script doesn't pile up duplicates.
+  // Safe mode: skip the destructive board reset if the workspace already has
+  // boards. This protects any board the user (boss/reviewer) created during
+  // their session from being wiped on the next `docker compose up`.
+  const existingBoardCount = await prisma.board.count({
+    where: { workspaceId: workspace.id },
+  });
+  if (SAFE_MODE && existingBoardCount > 0) {
+    console.log(
+      `→ safe mode: ${existingBoardCount} board(s) already exist — skipping board + activity seed`,
+    );
+    console.log('');
+    console.log('────────────────────────────────────────────────────────────');
+    console.log(' 🎉 Demo accounts ready (existing boards preserved):');
+    console.log(`   • Boss   — ${BOSS.email}   /   ${BOSS.password}`);
+    console.log(`   • Member — ${MEMBER.email} /   ${MEMBER.password}`);
+    console.log('────────────────────────────────────────────────────────────');
+    return;
+  }
+
+  // Full reset (manual run, or first boot with empty workspace): wipe + replay
+  // demo data so re-running doesn't pile up duplicates.
   await prisma.board.deleteMany({ where: { workspaceId: workspace.id } });
 
   for (let bi = 0; bi < BOARDS.length; bi += 1) {
