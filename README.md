@@ -1,6 +1,6 @@
 # Kompflow
 
-A Trello-style kanban app with workspaces, boards, drag-and-drop cards, and a live activity feed. The whole stack — Postgres, NestJS API, React web, Pusher-compatible realtime server — boots from a single `docker compose up`.
+A Kanban app with workspaces, boards, drag-and-drop cards, and a live activity feed. The whole stack — Postgres, NestJS API, React web, Pusher-compatible realtime server — boots from a single `docker compose up`.
 
 > **For reviewers:** clone this repo, run `docker compose up --build`, open `http://localhost:5173`, register an account, and you're in. No `.env` file, no local Node/pnpm/Postgres install required. Only Docker Desktop.
 
