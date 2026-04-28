@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1.7
+# Dev image — runs Nest in watch mode. Source is bind-mounted at runtime.
+
+FROM node:22-alpine
+RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+RUN apk add --no-cache openssl
+WORKDIR /repo
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+COPY packages/shared/package.json packages/shared/
+RUN pnpm install --no-frozen-lockfile
+
+COPY packages/shared packages/shared
+COPY apps/api/prisma apps/api/prisma
+RUN pnpm --filter @kanban/shared build
+RUN pnpm --filter @kanban/api exec prisma generate
+
+WORKDIR /repo/apps/api
+EXPOSE 3001
+CMD sh -c "pnpm exec prisma db push --accept-data-loss --skip-generate && pnpm start:dev"

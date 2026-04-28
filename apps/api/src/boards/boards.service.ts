@@ -3,13 +3,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ActivityService } from '../activity/activity.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 import { CreateBoardDto } from './dto/create-board.dto';
 import { UpdateBoardDto } from './dto/update-board.dto';
 
 @Injectable()
 export class BoardsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly workspaces: WorkspacesService,
+    private readonly activity: ActivityService,
+  ) {}
 
   async listForUser(userId: string) {
     const owned = await this.prisma.board.findMany({
@@ -27,21 +33,40 @@ export class BoardsService {
     return { owned, shared };
   }
 
-  async create(userId: string, dto: CreateBoardDto) {
+  /**
+   * Returns every board the user can access, grouped by workspace.
+   * Used by the Dashboard's "all boards" view.
+   */
+  async listAllAccessible(userId: string) {
+    const workspaces = await this.prisma.workspace.findMany({
+      where: {
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+      },
+      include: {
+        boards: { orderBy: { position: 'asc' } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return workspaces;
+  }
+
+  async create(userId: string, workspaceId: string, dto: CreateBoardDto) {
+    await this.workspaces.assertCanView(userId, workspaceId);
+
     const max = await this.prisma.board.aggregate({
-      where: { ownerId: userId },
+      where: { workspaceId },
       _max: { position: true },
     });
 
     const nextPosition = (max._max.position ?? 0) + 1024;
 
-    return this.prisma.$transaction(async (tx) => {
-      const board = await tx.board.create({
+    const board = await this.prisma.$transaction(async (tx) => {
+      return tx.board.create({
         data: {
+          workspaceId,
           ownerId: userId,
           title: dto.title,
           description: dto.description,
-          encrypted: dto.encrypted ?? false,
           position: nextPosition,
           members: {
             create: { userId, role: 'owner' },
@@ -55,9 +80,19 @@ export class BoardsService {
           },
         },
       });
-
-      return board;
     });
+
+    await this.activity.log({
+      workspaceId,
+      boardId: board.id,
+      actorId: userId,
+      verb: 'created',
+      entityType: 'board',
+      entityId: board.id,
+      entityTitle: board.title,
+    });
+
+    return board;
   }
 
   async show(userId: string, boardId: string) {
@@ -81,7 +116,22 @@ export class BoardsService {
 
   async update(userId: string, boardId: string, dto: UpdateBoardDto) {
     await this.assertCanEdit(userId, boardId);
-    return this.prisma.board.update({ where: { id: boardId }, data: dto });
+    const updated = await this.prisma.board.update({
+      where: { id: boardId },
+      data: dto,
+    });
+
+    await this.activity.log({
+      workspaceId: updated.workspaceId,
+      boardId: updated.id,
+      actorId: userId,
+      verb: 'updated',
+      entityType: 'board',
+      entityId: updated.id,
+      entityTitle: updated.title,
+    });
+
+    return updated;
   }
 
   async destroy(userId: string, boardId: string) {
@@ -92,6 +142,17 @@ export class BoardsService {
     if (board.ownerId !== userId) {
       throw new ForbiddenException('Only the owner can delete this board');
     }
+
+    await this.activity.log({
+      workspaceId: board.workspaceId,
+      boardId: null,
+      actorId: userId,
+      verb: 'deleted',
+      entityType: 'board',
+      entityId: board.id,
+      entityTitle: board.title,
+    });
+
     await this.prisma.board.delete({ where: { id: boardId } });
   }
 
@@ -99,7 +160,12 @@ export class BoardsService {
     const exists = await this.prisma.board.count({
       where: {
         id: boardId,
-        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        OR: [
+          { ownerId: userId },
+          { members: { some: { userId } } },
+          { workspace: { ownerId: userId } },
+          { workspace: { members: { some: { userId } } } },
+        ],
       },
     });
     if (!exists) throw new ForbiddenException('No access to this board');
@@ -112,6 +178,7 @@ export class BoardsService {
         OR: [
           { ownerId: userId },
           { members: { some: { userId, role: { in: ['owner', 'editor'] } } } },
+          { workspace: { ownerId: userId } },
         ],
       },
     });

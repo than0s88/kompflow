@@ -1,22 +1,48 @@
-name: kanban-board
+# =============================================================
+# Kompflow — single-command stack
+#   docker compose up
+# =============================================================
+# Brings up:
+#   - db        :5432   Postgres 16
+#   - soketi    :6001   Pusher-protocol-compatible WebSocket server (self-hosted)
+#   - api       :3001   NestJS (auto-runs prisma db push on boot)
+#   - web       :5173   React SPA served by nginx
+#
+# All defaults are baked in. No .env file required.
+# =============================================================
+
+name: kompflow
 
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: kanban
-      POSTGRES_PASSWORD: kanban
-      POSTGRES_DB: kanban
+      POSTGRES_USER: kompflow
+      POSTGRES_PASSWORD: kompflow
+      POSTGRES_DB: kompflow
     volumes:
       - db_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Not exposed on the host by default — keep the demo free of port conflicts
+    # with any local Postgres install. Add a "ports" mapping if you want direct
+    # DB access from your host.
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kanban -d kanban"]
+      test: ["CMD-SHELL", "pg_isready -U kompflow -d kompflow"]
       interval: 3s
       timeout: 3s
       retries: 20
+
+  soketi:
+    image: quay.io/soketi/soketi:1.6-16-alpine
+    restart: unless-stopped
+    environment:
+      SOKETI_DEBUG: "0"
+      SOKETI_DEFAULT_APP_ID: kompflow-app
+      SOKETI_DEFAULT_APP_KEY: kompflow-key
+      SOKETI_DEFAULT_APP_SECRET: kompflow-secret
+      SOKETI_DEFAULT_APP_ENABLE_CLIENT_MESSAGES: "false"
+    ports:
+      - "6001:6001"
 
   api:
     build:
@@ -26,44 +52,47 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      soketi:
+        condition: service_started
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://kanban:kanban@db:5432/kanban?schema=public
+      DATABASE_URL: postgresql://kompflow:kompflow@db:5432/kompflow?schema=public
       JWT_SECRET: demo-secret-do-not-use-in-production-9c7f2e0a
       JWT_EXPIRES_IN: 7d
       PORT: "3001"
-      WEB_ORIGIN: http://localhost:8080
+      WEB_ORIGIN: http://localhost:5173
       COOKIE_DOMAIN: localhost
       COOKIE_SECURE: "false"
-      # Pusher is optional — server logs a warning and skips broadcasts when blank.
-      PUSHER_APP_ID: ""
-      PUSHER_KEY: ""
-      PUSHER_SECRET: ""
-      PUSHER_CLUSTER: ""
+      # Self-hosted Pusher via Soketi — gives the demo working realtime with no external account
+      PUSHER_APP_ID: kompflow-app
+      PUSHER_KEY: kompflow-key
+      PUSHER_SECRET: kompflow-secret
+      PUSHER_CLUSTER: mt1
+      PUSHER_HOST: soketi
+      PUSHER_PORT: "6001"
+      PUSHER_USE_TLS: "false"
       # OAuth env vars are intentionally left unset — strategies fall back to
-      # "unset" placeholders and emit a warning. Setting them to "" would pass
-      # through the ?? guard and crash passport-google-oauth20 on boot.
+      # "unset" placeholders and just log a warning. Setting them to "" would
+      # crash passport-google-oauth20 on boot.
     ports:
       - "3001:3001"
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/api"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 15s
 
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
-        VITE_PUSHER_KEY: ""
-        VITE_PUSHER_CLUSTER: ""
+        VITE_API_URL: http://localhost:3001
+        VITE_PUSHER_KEY: kompflow-key
+        VITE_PUSHER_CLUSTER: mt1
+        VITE_PUSHER_HOST: localhost
+        VITE_PUSHER_PORT: "6001"
+        VITE_PUSHER_USE_TLS: "false"
     restart: unless-stopped
     depends_on:
       - api
     ports:
-      - "8080:80"
+      - "5173:80"
 
 volumes:
   db_data:

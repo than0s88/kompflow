@@ -31,8 +31,11 @@ FROM build AS runtime
 ENV NODE_ENV=production
 WORKDIR /repo/apps/api
 
-COPY apps/api/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
 EXPOSE 3001
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+# Inline boot sequence:
+#   1. Apply Prisma schema with db push (idempotent — re-running is safe).
+#   2. Launch the NestJS server.
+# Inlined here instead of using a shell script so Windows hosts don't trip on
+# CRLF line endings in a checked-in *.sh file.
+CMD ["sh", "-c", "echo '[api] applying database schema...' && pnpm exec prisma db push --skip-generate --accept-data-loss && echo '[api] starting NestJS...' && exec node dist/main"]

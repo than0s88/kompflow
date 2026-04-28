@@ -65,9 +65,6 @@ importers:
       passport-jwt:
         specifier: ^4.0.1
         version: 4.0.1
-      passport-microsoft:
-        specifier: ^2.1.0
-        version: 2.1.0
       pusher:
         specifier: ^5.3.3
         version: 5.3.3
@@ -3977,10 +3974,6 @@ packages:
 
   passport-jwt@4.0.1:
     resolution: {integrity: sha512-UCKMDYhNuGOBE9/9Ycuoyh7vP6jpeTp/+sfMJl7nLff/t6dps+iaeE0hhNkKN8/HZHcJ7lCdOyDxHdDoxoSvdQ==}
-
-  passport-microsoft@2.1.0:
-    resolution: {integrity: sha512-7bOcjEmZCHg5qD55iHaMD/mgBxPtXLbqAwmKox5IsqOSEU50WJk5nQKK4lxKdBHLZ0hf+gzrFgDsTybJP18/JA==}
-    engines: {node: '>= 0.4.0'}
 
   passport-oauth2@1.8.0:
     resolution: {integrity: sha512-cjsQbOrXIDE4P8nNb3FQRCCmJJ/utnFKEz2NX209f7KOHPoX18gF7gBzBbLLsj2/je4KrgiwLLGjf0lm9rtTBA==}
@@ -9246,10 +9239,6 @@ snapshots:
     dependencies:
       jsonwebtoken: 9.0.3
       passport-strategy: 1.0.0
-
-  passport-microsoft@2.1.0:
-    dependencies:
-      passport-oauth2: 1.8.0
 
   passport-oauth2@1.8.0:
     dependencies:

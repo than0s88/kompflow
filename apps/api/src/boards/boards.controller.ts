@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser, type AuthUser } from '../auth/current-user.decorator';
@@ -26,13 +27,16 @@ export class BoardsController {
   ) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
+  list(@CurrentUser() user: AuthUser, @Query('all') all?: string) {
+    if (all === 'true' || all === '1') {
+      return this.boards.listAllAccessible(user.id);
+    }
     return this.boards.listForUser(user.id);
   }
 
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateBoardDto) {
-    return this.boards.create(user.id, dto);
+    return this.boards.create(user.id, dto.workspaceId, dto);
   }
 
   @Get(':id')

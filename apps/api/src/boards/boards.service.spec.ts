@@ -1,13 +1,16 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { BoardsService } from './boards.service';
+import { ActivityService } from '../activity/activity.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
+import { BoardsService } from './boards.service';
 
 type PrismaMock = {
   board: {
     count: jest.Mock;
     findUnique: jest.Mock;
     delete: jest.Mock;
+    aggregate: jest.Mock;
   };
 };
 
@@ -16,18 +19,28 @@ const makePrismaMock = (): PrismaMock => ({
     count: jest.fn(),
     findUnique: jest.fn(),
     delete: jest.fn(),
+    aggregate: jest.fn(),
   },
 });
 
 describe('BoardsService', () => {
   let service: BoardsService;
   let prisma: PrismaMock;
+  let activity: { log: jest.Mock };
+  let workspaces: { assertCanView: jest.Mock };
 
   beforeEach(async () => {
     prisma = makePrismaMock();
+    activity = { log: jest.fn().mockResolvedValue(undefined) };
+    workspaces = { assertCanView: jest.fn().mockResolvedValue(undefined) };
 
     const moduleRef = await Test.createTestingModule({
-      providers: [BoardsService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        BoardsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: WorkspacesService, useValue: workspaces },
+        { provide: ActivityService, useValue: activity },
+      ],
     }).compile();
 
     service = moduleRef.get(BoardsService);
@@ -53,15 +66,12 @@ describe('BoardsService', () => {
 
   describe('assertCanEdit', () => {
     it('rejects viewer-role members (only owner + editor allowed)', async () => {
-      // Simulate: the count query restricts to role IN [owner, editor],
-      // so a viewer-only member returns 0.
       prisma.board.count.mockResolvedValue(0);
 
       await expect(
         service.assertCanEdit('viewer-user', 'board-1'),
       ).rejects.toBeInstanceOf(ForbiddenException);
 
-      // Verify the query actually restricts by role
       const callArg = prisma.board.count.mock.calls[0][0] as {
         where: { OR: Array<Record<string, unknown>> };
       };
@@ -95,6 +105,8 @@ describe('BoardsService', () => {
       prisma.board.findUnique.mockResolvedValue({
         id: 'board-1',
         ownerId: 'owner-user',
+        workspaceId: 'ws-1',
+        title: 'Board',
       });
 
       await expect(
@@ -103,10 +115,12 @@ describe('BoardsService', () => {
       expect(prisma.board.delete).not.toHaveBeenCalled();
     });
 
-    it('deletes when caller is the owner', async () => {
+    it('deletes when caller is the owner and logs an activity', async () => {
       prisma.board.findUnique.mockResolvedValue({
         id: 'board-1',
         ownerId: 'owner-user',
+        workspaceId: 'ws-1',
+        title: 'Board',
       });
       prisma.board.delete.mockResolvedValue({ id: 'board-1' });
 
@@ -114,6 +128,16 @@ describe('BoardsService', () => {
       expect(prisma.board.delete).toHaveBeenCalledWith({
         where: { id: 'board-1' },
       });
+      expect(activity.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspaceId: 'ws-1',
+          actorId: 'owner-user',
+          verb: 'deleted',
+          entityType: 'board',
+          entityId: 'board-1',
+          entityTitle: 'Board',
+        }),
+      );
     });
   });
 });

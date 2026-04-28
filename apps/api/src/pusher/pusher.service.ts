@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Pusher from 'pusher';
-import type { BoardUpdatedEvent } from '@kanban/shared';
+import type { ActivityRecord, BoardUpdatedEvent } from '@kanban/shared';
 
 @Injectable()
 export class PusherService {
@@ -57,6 +57,29 @@ export class PusherService {
       );
     } catch (err) {
       this.logger.error('Pusher broadcast failed', err);
+    }
+  }
+
+  async broadcastWorkspaceActivity(
+    workspaceId: string,
+    activity: ActivityRecord,
+  ): Promise<void> {
+    if (!this.pusher) return;
+    try {
+      await this.pusher.trigger(
+        `private-workspace-${workspaceId}`,
+        'activity.created',
+        activity,
+      );
+      if (activity.boardId) {
+        await this.pusher.trigger(
+          `private-board-${activity.boardId}`,
+          'activity.created',
+          activity,
+        );
+      }
+    } catch (err) {
+      this.logger.error('Pusher activity broadcast failed', err);
     }
   }
 

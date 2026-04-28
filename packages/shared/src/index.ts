@@ -29,11 +29,11 @@ export interface Column {
 
 export interface Board {
   id: string;
+  workspaceId: string;
   ownerId: string;
   title: string;
   description: string | null;
   position: number;
-  encrypted: boolean;
   columns?: Column[];
   createdAt: string;
   updatedAt: string;
@@ -49,6 +49,63 @@ export interface BoardMember {
   user?: Pick<User, 'id' | 'name' | 'email'>;
 }
 
+export type WorkspaceVisibility = 'private' | 'workspace';
+
+export interface Workspace {
+  id: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  visibility: WorkspaceVisibility;
+  createdAt: string;
+  updatedAt: string;
+  boards?: Board[];
+  members?: WorkspaceMember[];
+  _count?: { boards: number; members: number };
+}
+
+export interface WorkspaceMember {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  role: 'admin' | 'member';
+  user?: Pick<User, 'id' | 'name' | 'email' | 'avatarUrl'>;
+}
+
+export type ActivityVerb =
+  | 'created'
+  | 'updated'
+  | 'deleted'
+  | 'added'
+  | 'moved'
+  | 'transferred'
+  | 'removed';
+
+export interface ActivityRecord {
+  id: string;
+  workspaceId: string;
+  boardId: string | null;
+  actorId: string;
+  verb: ActivityVerb;
+  entityType: 'workspace' | 'board' | 'column' | 'card';
+  entityId: string;
+  entityTitle: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  actor: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string | null;
+  };
+  board: { id: string; title: string } | null;
+  workspace: {
+    id: string;
+    name: string;
+    visibility: WorkspaceVisibility;
+  };
+}
+
 // API request/response DTOs
 
 export interface RegisterDto {
@@ -62,10 +119,20 @@ export interface LoginDto {
   password: string;
 }
 
+export interface CreateWorkspaceDto {
+  name: string;
+  visibility?: WorkspaceVisibility;
+}
+
+export interface UpdateWorkspaceDto {
+  name?: string;
+  visibility?: WorkspaceVisibility;
+}
+
 export interface CreateBoardDto {
   title: string;
+  workspaceId: string;
   description?: string;
-  encrypted?: boolean;
 }
 
 export interface UpdateBoardDto {
@@ -93,10 +160,19 @@ export interface UpdateCardDto {
 
 export interface ReorderDto {
   columns?: { id: string; position: number }[];
-  cards?: { id: string; position: number; columnId: string }[];
+  cards?: {
+    id: string;
+    position: number;
+    columnId: string;
+    targetBoardId?: string;
+  }[];
 }
 
 export interface BoardUpdatedEvent {
   boardId: string;
   actorUserId: string | null;
+}
+
+export interface ActivityCreatedEvent {
+  activity: ActivityRecord;
 }

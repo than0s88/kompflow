@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { autoseedWorkspaces } from './prisma/autoseed';
+import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -24,6 +26,9 @@ async function bootstrap() {
   );
 
   app.setGlobalPrefix('api');
+
+  // Backfill workspaces for any pre-existing users.
+  await autoseedWorkspaces(app.get(PrismaService));
 
   const port = config.get<number>('PORT') ?? 3001;
   await app.listen(port);

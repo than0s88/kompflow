@@ -2,8 +2,9 @@ import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
-import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
+import { AuthService } from './auth.service';
 
 type PrismaMock = {
   user: {
@@ -25,16 +26,23 @@ describe('AuthService', () => {
   let service: AuthService;
   let prisma: PrismaMock;
   let jwt: { sign: jest.Mock };
+  let workspaces: { ensurePersonalWorkspace: jest.Mock };
 
   beforeEach(async () => {
     prisma = makePrismaMock();
     jwt = { sign: jest.fn().mockReturnValue('signed.jwt.token') };
+    workspaces = {
+      ensurePersonalWorkspace: jest
+        .fn()
+        .mockResolvedValue({ id: 'ws-1', name: "Alice's Workspace" }),
+    };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: PrismaService, useValue: prisma },
         { provide: JwtService, useValue: jwt },
+        { provide: WorkspacesService, useValue: workspaces },
       ],
     }).compile();
 
@@ -88,6 +96,12 @@ describe('AuthService', () => {
       // The hash should verify against the original plaintext
       const ok = await bcrypt.compare(plaintext, storedHash);
       expect(ok).toBe(true);
+
+      // And a personal workspace was provisioned for the new user
+      expect(workspaces.ensurePersonalWorkspace).toHaveBeenCalledWith(
+        'u1',
+        'Alice',
+      );
     });
   });
 

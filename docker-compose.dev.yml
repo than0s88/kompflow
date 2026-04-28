@@ -1,0 +1,43 @@
+# Dev override — bind-mounts source and runs watchers for instant reload.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+# Tear down:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile.dev
+    command: sh -c "pnpm exec prisma db push --accept-data-loss --skip-generate && pnpm start:dev"
+    environment:
+      NODE_ENV: development
+      WEB_ORIGIN: http://localhost:5173
+    volumes:
+      - ./apps/api/src:/repo/apps/api/src
+      - ./apps/api/prisma:/repo/apps/api/prisma
+      - ./apps/api/tsconfig.json:/repo/apps/api/tsconfig.json
+      - ./apps/api/tsconfig.build.json:/repo/apps/api/tsconfig.build.json
+      - ./apps/api/nest-cli.json:/repo/apps/api/nest-cli.json
+      - ./packages/shared/src:/repo/packages/shared/src
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.dev
+    command: pnpm dev --host 0.0.0.0
+    environment:
+      VITE_API_PROXY_TARGET: http://api:3001
+      VITE_API_URL: ""
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/web/src:/repo/apps/web/src
+      - ./apps/web/public:/repo/apps/web/public
+      - ./apps/web/index.html:/repo/apps/web/index.html
+      - ./apps/web/vite.config.ts:/repo/apps/web/vite.config.ts
+      - ./apps/web/tsconfig.json:/repo/apps/web/tsconfig.json
+      - ./apps/web/tsconfig.app.json:/repo/apps/web/tsconfig.app.json
+      - ./apps/web/tsconfig.node.json:/repo/apps/web/tsconfig.node.json
+      - ./packages/shared/src:/repo/packages/shared/src

@@ -9,6 +9,7 @@ import {
 import { CurrentUser, type AuthUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BoardsService } from '../boards/boards.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 import { PusherService } from './pusher.service';
 
 interface PusherAuthBody {
@@ -22,6 +23,7 @@ export class PusherController {
   constructor(
     private readonly pusher: PusherService,
     private readonly boards: BoardsService,
+    private readonly workspaces: WorkspacesService,
   ) {}
 
   @Post('auth')
@@ -30,12 +32,15 @@ export class PusherController {
       throw new BadRequestException('socket_id and channel_name required');
     }
 
-    if (!body.channel_name.startsWith('private-board-')) {
+    if (body.channel_name.startsWith('private-board-')) {
+      const boardId = body.channel_name.slice('private-board-'.length);
+      await this.boards.assertCanView(user.id, boardId);
+    } else if (body.channel_name.startsWith('private-workspace-')) {
+      const workspaceId = body.channel_name.slice('private-workspace-'.length);
+      await this.workspaces.assertCanView(user.id, workspaceId);
+    } else {
       throw new ForbiddenException('Unsupported channel');
     }
-
-    const boardId = body.channel_name.slice('private-board-'.length);
-    await this.boards.assertCanView(user.id, boardId);
 
     const result = this.pusher.authorizeChannel(
       body.socket_id,

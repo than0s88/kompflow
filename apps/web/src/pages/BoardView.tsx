@@ -1,4 +1,10 @@
-import type { Board, Card, Column, ReorderDto, UpdateBoardDto } from '@kanban/shared';
+import type {
+  Board,
+  Card,
+  Column,
+  ReorderDto,
+  UpdateBoardDto,
+} from '@kanban/shared';
 import {
   DndContext,
   DragOverlay,
@@ -24,49 +30,19 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+import ActivityFeed from '../components/activity/ActivityFeed';
 import AddColumn from '../components/Kanban/AddColumn';
 import KanbanCard from '../components/Kanban/Card';
 import CardModal from '../components/Kanban/CardModal';
 import KanbanColumn from '../components/Kanban/Column';
-import PassphraseGate from '../components/Kanban/PassphraseGate';
-import SettingsPanel from '../components/SettingsPanel';
-import { useAuth } from '../auth/AuthContext';
 import { api } from '../lib/api';
-import {
-  clearStoredPassphrase,
-  getStoredPassphrase,
-} from '../lib/board-key';
-import { deriveKey } from '../lib/crypto';
 import { getPusher } from '../lib/pusher';
-import '../styles/app.css';
 
-type ActiveItem = { type: 'column'; column: Column } | { type: 'card'; card: Card } | null;
-
-const AVATAR_PALETTE = [
-  '#0079BF',
-  '#61BD4F',
-  '#FF9F1A',
-  '#EB5A46',
-  '#C377E0',
-  '#00C2E0',
-  '#FF78CB',
-  '#344563',
-];
-
-function initialsFor(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-function colorFor(seed: string): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
-  }
-  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
-}
+type ActiveItem =
+  | { type: 'column'; column: Column }
+  | { type: 'card'; card: Card }
+  | null;
 
 export default function BoardView() {
   const { boardId } = useParams<{ boardId: string }>();
@@ -76,7 +52,7 @@ export default function BoardView() {
   const { data: board, isLoading } = useQuery({
     queryKey: ['board', boardId],
     queryFn: async () => (await api.get<Board>(`/boards/${boardId}`)).data,
-    enabled: !!boardId,
+    enabled: Boolean(boardId),
   });
 
   const [columns, setColumns] = useState<Column[]>([]);
@@ -84,9 +60,7 @@ export default function BoardView() {
   const titleRef = useRef<HTMLInputElement>(null);
   const [titleDraft, setTitleDraft] = useState('');
   const [openCardId, setOpenCardId] = useState<string | null>(null);
-  const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
-  const [keyAttempted, setKeyAttempted] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
 
   useEffect(() => {
     if (board?.columns) setColumns(board.columns);
@@ -96,46 +70,20 @@ export default function BoardView() {
     if (board?.title) setTitleDraft(board.title);
   }, [board?.title]);
 
-  // For encrypted boards, derive the key from a stashed passphrase if present.
-  // If no passphrase is stashed, the gate renders below and prompts for it.
-  useEffect(() => {
-    if (!board) return;
-    if (!board.encrypted) {
-      setEncryptionKey(null);
-      setKeyAttempted(true);
-      return;
-    }
-    setKeyAttempted(false);
-    const stored = getStoredPassphrase(board.id);
-    if (!stored) {
-      setEncryptionKey(null);
-      setKeyAttempted(true);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const key = await deriveKey(stored, board.id);
-        if (!cancelled) setEncryptionKey(key);
-      } catch {
-        if (!cancelled) clearStoredPassphrase(board.id);
-      } finally {
-        if (!cancelled) setKeyAttempted(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [board]);
-
   // Real-time: refetch when other users update the board
   useEffect(() => {
     if (!boardId || !user) return;
-    const pusher = getPusher();
+    let pusher;
+    try {
+      pusher = getPusher();
+    } catch {
+      return;
+    }
     const channel = pusher.subscribe(`private-board-${boardId}`);
-    const handler = (e: { actor_user_id: string | null }) => {
-      if (e.actor_user_id === user.id) return;
-      qc.invalidateQueries({ queryKey: ['board', boardId] });
+    const handler = (e: { actor_user_id?: string | null; actorUserId?: string | null }) => {
+      const actor = e.actor_user_id ?? e.actorUserId ?? null;
+      if (actor === user.id) return;
+      void qc.invalidateQueries({ queryKey: ['board', boardId] });
     };
     channel.bind('board.updated', handler);
     return () => {
@@ -158,7 +106,9 @@ export default function BoardView() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const findColumnByCard = (cardId: string) =>
@@ -229,20 +179,30 @@ export default function BoardView() {
       const activeCard = sourceCol.cards.find((c) => c.id === activeCardId);
       if (!activeCard) return;
 
-      const next: Column[] = columns.map((c) => ({ ...c, cards: [...c.cards] }));
+      const next: Column[] = columns.map((c) => ({
+        ...c,
+        cards: [...c.cards],
+      }));
       const sourceIdx = next.findIndex((c) => c.id === sourceCol.id);
       const targetIdx = next.findIndex((c) => c.id === targetColId);
 
-      next[sourceIdx].cards = next[sourceIdx].cards.filter((c) => c.id !== activeCardId);
+      next[sourceIdx].cards = next[sourceIdx].cards.filter(
+        (c) => c.id !== activeCardId,
+      );
       const movedCard: Card = { ...activeCard, columnId: targetColId };
       next[targetIdx].cards.splice(targetIndex, 0, movedCard);
 
       setColumns(next);
 
-      const cardUpdates: { id: string; position: number; columnId: string }[] = [];
+      const cardUpdates: { id: string; position: number; columnId: string }[] =
+        [];
       for (const col of next) {
         col.cards.forEach((c, i) => {
-          cardUpdates.push({ id: c.id, position: (i + 1) * 1024, columnId: col.id });
+          cardUpdates.push({
+            id: c.id,
+            position: (i + 1) * 1024,
+            columnId: col.id,
+          });
         });
       }
       reorderMutation.mutate({ cards: cardUpdates });
@@ -273,37 +233,17 @@ export default function BoardView() {
 
   if (isLoading) {
     return (
-      <div className="app">
-        <div
-          style={{
-            display: 'grid',
-            placeItems: 'center',
-            height: '100vh',
-            color: 'white',
-            fontWeight: 600,
-          }}
-        >
-          Loading…
-        </div>
+      <div className="kf-board-page">
+        <div className="kf-board-page__loading">Loading board…</div>
       </div>
     );
   }
   if (!board) {
     return (
-      <div className="app">
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            gap: 12,
-            color: 'white',
-          }}
-        >
+      <div className="kf-board-page">
+        <div className="kf-board-page__missing">
           <p>Board not found.</p>
-          <Link to="/" className="btn-secondary">
+          <Link to="/dashboard" className="kf-btn kf-btn--ghost">
             Back to boards
           </Link>
         </div>
@@ -311,10 +251,7 @@ export default function BoardView() {
     );
   }
 
-  const userInitials = user ? initialsFor(user.name) : '?';
-  const userColor = user ? colorFor(user.id) : AVATAR_PALETTE[0];
-
-  // Locate the currently-open card from the live columns state so updates re-render.
+  // Locate the currently-open card so updates re-render.
   const openCardCtx = (() => {
     if (!openCardId) return null;
     for (const col of columns) {
@@ -324,64 +261,34 @@ export default function BoardView() {
     return null;
   })();
 
-  const needsPassphrase =
-    !!board.encrypted && keyAttempted && !encryptionKey;
-
   return (
-    <div className="app">
-      <header className="topbar">
-        <Link to="/" className="topbar-logo" style={{ textDecoration: 'none', color: 'white' }}>
-          <span className="topbar-logo-mark">K</span>
-          <span>Kompflow</span>
-        </Link>
-        <div className="topbar-divider" />
+    <div className="kf-board-page">
+      <header className="kf-board-page__head">
         <input
           ref={titleRef}
-          className="topbar-board-name"
+          className="kf-board-page__title"
           value={titleDraft}
           onChange={(e) => setTitleDraft(e.target.value)}
           onBlur={commitTitle}
           onKeyDown={onTitleKeyDown}
           aria-label="Board title"
-          style={{
-            background: 'transparent',
-            border: 0,
-            color: 'white',
-            font: 'inherit',
-          }}
         />
-        <div className="topbar-spacer" />
-        <div className="topbar-presence">
-          {user && (
-            <div
-              className="avatar live"
-              style={{ background: userColor }}
-              title={user.name}
-            >
-              {userInitials}
-            </div>
-          )}
+        <div className="kf-board-page__actions">
+          <button
+            type="button"
+            className={
+              'kf-btn kf-btn--ghost' + (activityOpen ? ' is-active' : '')
+            }
+            onClick={() => setActivityOpen((v) => !v)}
+            aria-expanded={activityOpen}
+            aria-controls="kf-board-activity"
+          >
+            🕒 Activity
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setSettingsOpen(true)}
-          className="topbar-icon-btn"
-          aria-label="Settings"
-          title="Settings"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </button>
       </header>
 
-      <SettingsPanel
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
-
-      {!needsPassphrase && (
+      <div className="kf-board-page__body">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -411,34 +318,39 @@ export default function BoardView() {
             ) : null}
           </DragOverlay>
         </DndContext>
-      )}
 
-      {openCardCtx && !needsPassphrase && (
+        {activityOpen ? (
+          <aside
+            id="kf-board-activity"
+            className="kf-board-page__activity"
+            aria-label="Board activity"
+          >
+            <header className="kf-board-page__activity-head">
+              <h2>Activity</h2>
+              <button
+                type="button"
+                className="kf-board-page__activity-close"
+                onClick={() => setActivityOpen(false)}
+                aria-label="Close activity"
+              >
+                ×
+              </button>
+            </header>
+            <ActivityFeed scope="board" id={boardId} />
+          </aside>
+        ) : null}
+      </div>
+
+      {openCardCtx ? (
         <CardModal
           card={openCardCtx.card}
           boardId={board.id}
           columnTitle={openCardCtx.column.title}
-          encryptionKey={encryptionKey}
+          encryptionKey={null}
           onClose={() => setOpenCardId(null)}
-          onRequestPassphraseReset={() => {
-            clearStoredPassphrase(board.id);
-            setEncryptionKey(null);
-            setKeyAttempted(true);
-            setOpenCardId(null);
-          }}
+          onRequestPassphraseReset={() => setOpenCardId(null)}
         />
-      )}
-
-      {needsPassphrase && (
-        <PassphraseGate
-          boardId={board.id}
-          boardTitle={board.title}
-          onUnlock={(key) => {
-            setEncryptionKey(key);
-            setKeyAttempted(true);
-          }}
-        />
-      )}
+      ) : null}
     </div>
   );
 }

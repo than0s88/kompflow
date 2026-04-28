@@ -93,7 +93,7 @@ export class AuthController {
     }
     const token = this.auth.signToken(user.id);
     this.setCookie(res, token);
-    res.redirect(webOrigin);
+    res.redirect(`${webOrigin}/dashboard`);
   }
 
   private setCookie(res: Response, token: string) {

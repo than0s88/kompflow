@@ -17,7 +17,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'light',
+  theme: 'dark',
   motion: 1,
   density: 'comfy',
   cardSize: 'default',

@@ -6,6 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -30,6 +31,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly workspaces: WorkspacesService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -43,6 +45,8 @@ export class AuthService {
       data: { name: dto.name, email: dto.email, passwordHash },
       select: PUBLIC_USER_SELECT,
     });
+
+    await this.workspaces.ensurePersonalWorkspace(user.id, user.name);
 
     return { user, token: this.signToken(user.id) };
   }
@@ -106,6 +110,7 @@ export class AuthService {
       },
       select: PUBLIC_USER_SELECT,
     });
+    await this.workspaces.ensurePersonalWorkspace(user.id, user.name);
     return user;
   }
 

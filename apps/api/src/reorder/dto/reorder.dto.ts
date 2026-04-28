@@ -24,6 +24,11 @@ export class CardReorderItemDto {
 
   @IsString()
   columnId!: string;
+
+  // Set when moving a card to a column on a different board (cross-board transfer)
+  @IsOptional()
+  @IsString()
+  targetBoardId?: string;
 }
 
 export class ReorderDto {

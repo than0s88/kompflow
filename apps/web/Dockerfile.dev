@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1.7
+# Dev image — runs Vite dev server with HMR. Source is bind-mounted at runtime.
+
+FROM node:22-alpine
+RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+WORKDIR /repo
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+COPY packages/shared/package.json packages/shared/
+RUN pnpm install --no-frozen-lockfile
+
+COPY packages/shared packages/shared
+RUN pnpm --filter @kanban/shared build
+
+WORKDIR /repo/apps/web
+EXPOSE 5173
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]
