@@ -66,7 +66,7 @@ To stop the stack: `Ctrl+C`. To wipe the database between runs: `docker compose 
 2. The app auto-creates a personal workspace (`<your name>'s Workspace`). It shows up in the left sidebar.
 3. Click **+ New board** in the workspace view (or in the dashboard) to create a board. Three default columns (`To Do`, `In Progress`, `Done`) are seeded automatically.
 4. Add cards. Drag them between columns. Open a card to edit it (markdown supported, image embedding supported).
-5. Click **🕒 Activity** in the board header — see every move/add/update logged in a Trello-style timeline.
+5. Click **🕒 Activity** in the board header — see every move/add/update logged in a Kanban-style timeline.
 6. From the sidebar, switch to **Activity** for the workspace-wide feed.
 7. Use the workspace switcher (top of the sidebar) → **+ Create workspace** to make a second workspace, then create boards in it.
 8. From the sidebar, click **🏠 All boards** to see every board across every workspace, grouped.
