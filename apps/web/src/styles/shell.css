@@ -288,6 +288,28 @@
   font-size: 12px; color: var(--canvas-fg-faint); padding: 8px 12px;
 }
 
+/* ----------------------------------------------------------------
+   Force every text node inside the sidebar to white, regardless of
+   the active theme/accent palette. The sidebar is always rendered
+   on a dark surface, so a literal #fff is the correct color and
+   doesn't depend on contrast computations.
+   `:not(.kf-sidebar-show)` keeps the floating restore button (which
+   is portaled-style outside the sidebar tree) untouched.
+   ---------------------------------------------------------------- */
+.kf-sidebar,
+.kf-sidebar a,
+.kf-sidebar button,
+.kf-sidebar span,
+.kf-sidebar h1,
+.kf-sidebar h2,
+.kf-sidebar h3,
+.kf-sidebar p,
+.kf-sidebar li,
+.kf-sidebar [class^="kf-sidebar"],
+.kf-sidebar [class*=" kf-sidebar"] {
+  color: #ffffff !important;
+}
+
 .kf-sidebar__bottom {
   margin-top: auto; padding-top: 10px;
   border-top: 1px solid var(--canvas-hairline);

@@ -9,6 +9,7 @@ export type MotionMultiplier = 0 | 0.5 | 1 | 1.5 | 2;
 export type Density = 'compact' | 'comfy' | 'cozy';
 export type CardSize = 'small' | 'default' | 'large';
 export type Accent =
+  // Solid hues
   | 'green'
   | 'blue'
   | 'purple'
@@ -20,13 +21,31 @@ export type Accent =
   | 'indigo'
   | 'lime'
   | 'amber'
-  | 'midnight';
+  | 'midnight'
+  // Gradient blends — set boardBgGradient on the palette so the canvas
+  // shows the actual gradient while color math (sidebar tint, contrast)
+  // still uses the solid boardBg endpoint.
+  | 'sunset'
+  | 'aurora'
+  | 'cosmic'
+  | 'ember'
+  | 'ocean'
+  | 'sakura'
+  | 'mint'
+  | 'twilight'
+  | 'volcano'
+  | 'glacier'
+  | 'forest'
+  | 'royal';
 
 export interface AccentPalette {
   accent: string;
   accent600: string;
   accent100: string;
   boardBg: string;
+  /** Optional CSS background value (linear-gradient(...)). When set, --bg-board
+   *  is the gradient; the solid boardBg is still used for sidebar/canvas math. */
+  boardBgGradient?: string;
 }
 
 export const ACCENT_PALETTES: Readonly<Record<Accent, AccentPalette>> = {
@@ -42,6 +61,70 @@ export const ACCENT_PALETTES: Readonly<Record<Accent, AccentPalette>> = {
   lime:     { accent: '#65A30D', accent600: '#4D7C0F', accent100: '#ECFCCB', boardBg: '#65A30D' },
   amber:    { accent: '#F59E0B', accent600: '#B45309', accent100: '#FEF3C7', boardBg: '#F59E0B' },
   midnight: { accent: '#1E3A8A', accent600: '#1E2C5A', accent100: '#DBE2F3', boardBg: '#1E3A8A' },
+
+  // Gradients — accent/accent600/accent100 use the *dominant* solid hue so
+  // buttons + chips stay solid; boardBg picks the cooler endpoint so sidebar
+  // mixing reads correctly. boardBgGradient paints the actual canvas.
+  sunset: {
+    accent: '#F59E0B', accent600: '#B45309', accent100: '#FCEAD0',
+    boardBg: '#EC4899',
+    boardBgGradient: 'linear-gradient(135deg, #F59E0B 0%, #EC4899 100%)',
+  },
+  aurora: {
+    accent: '#10B981', accent600: '#047857', accent100: '#D1FAE5',
+    boardBg: '#0EA5E9',
+    boardBgGradient: 'linear-gradient(135deg, #10B981 0%, #0EA5E9 100%)',
+  },
+  cosmic: {
+    accent: '#A855F7', accent600: '#7E22CE', accent100: '#F3E8FF',
+    boardBg: '#6366F1',
+    boardBgGradient: 'linear-gradient(135deg, #A855F7 0%, #6366F1 100%)',
+  },
+  ember: {
+    accent: '#EF4444', accent600: '#B91C1C', accent100: '#FEE2E2',
+    boardBg: '#F59E0B',
+    boardBgGradient: 'linear-gradient(135deg, #EF4444 0%, #F59E0B 100%)',
+  },
+  ocean: {
+    accent: '#1E40AF', accent600: '#1E3A8A', accent100: '#DBEAFE',
+    boardBg: '#0D9488',
+    boardBgGradient: 'linear-gradient(135deg, #1E40AF 0%, #0D9488 100%)',
+  },
+  sakura: {
+    accent: '#F472B6', accent600: '#DB2777', accent100: '#FCE7F3',
+    boardBg: '#DB2777',
+    boardBgGradient: 'linear-gradient(135deg, #F472B6 0%, #DB2777 100%)',
+  },
+  mint: {
+    accent: '#14B8A6', accent600: '#0F766E', accent100: '#CCFBF1',
+    boardBg: '#84CC16',
+    boardBgGradient: 'linear-gradient(135deg, #14B8A6 0%, #84CC16 100%)',
+  },
+  twilight: {
+    accent: '#4338CA', accent600: '#3730A3', accent100: '#E0E7FF',
+    boardBg: '#7E22CE',
+    boardBgGradient: 'linear-gradient(135deg, #4338CA 0%, #7E22CE 100%)',
+  },
+  volcano: {
+    accent: '#DC2626', accent600: '#991B1B', accent100: '#FEE2E2',
+    boardBg: '#44403C',
+    boardBgGradient: 'linear-gradient(135deg, #44403C 0%, #DC2626 100%)',
+  },
+  glacier: {
+    accent: '#0EA5E9', accent600: '#0369A1', accent100: '#E0F2FE',
+    boardBg: '#4338CA',
+    boardBgGradient: 'linear-gradient(135deg, #0EA5E9 0%, #4338CA 100%)',
+  },
+  forest: {
+    accent: '#166534', accent600: '#14532D', accent100: '#DCFCE7',
+    boardBg: '#0F766E',
+    boardBgGradient: 'linear-gradient(135deg, #166534 0%, #0F766E 100%)',
+  },
+  royal: {
+    accent: '#7C3AED', accent600: '#5B21B6', accent100: '#EDE9FE',
+    boardBg: '#7C3AED',
+    boardBgGradient: 'linear-gradient(135deg, #7C3AED 0%, #F59E0B 100%)',
+  },
 };
 
 export interface Settings {
@@ -71,18 +154,10 @@ const MOTION_VALUES: ReadonlyArray<MotionMultiplier> = [0, 0.5, 1, 1.5, 2];
 const DENSITIES: ReadonlyArray<Density> = ['compact', 'comfy', 'cozy'];
 const CARD_SIZES: ReadonlyArray<CardSize> = ['small', 'default', 'large'];
 const ACCENTS: ReadonlyArray<Accent> = [
-  'green',
-  'blue',
-  'purple',
-  'red',
-  'orange',
-  'pink',
-  'teal',
-  'gray',
-  'indigo',
-  'lime',
-  'amber',
-  'midnight',
+  'green', 'blue', 'purple', 'red', 'orange', 'pink',
+  'teal', 'gray', 'indigo', 'lime', 'amber', 'midnight',
+  'sunset', 'aurora', 'cosmic', 'ember', 'ocean', 'sakura',
+  'mint', 'twilight', 'volcano', 'glacier', 'forest', 'royal',
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -142,21 +217,38 @@ export function applySettings(settings: Settings): void {
   root.style.setProperty('--accent', palette.accent);
   root.style.setProperty('--accent-600', palette.accent600);
   root.style.setProperty('--accent-100', palette.accent100);
-  root.style.setProperty('--bg-board', palette.boardBg);
+  // --bg-board is the canvas background. For gradient palettes use the gradient
+  // string; otherwise the solid hex. Sidebar mixing below always uses the solid
+  // boardBg so it stays a clean tinted hue.
+  root.style.setProperty('--bg-board', palette.boardBgGradient ?? palette.boardBg);
 
   // Trello-classic canvas: in light mode the canvas IS the accent at full
   // saturation; the sidebar is a deeper variant of the same hue. In dark mode
   // both are tinted toward black for a "dusk" feel. Text contrast is then
   // computed from the actual canvas luminance.
   const isDark = settings.theme === 'dark';
-  const canvasBg = isDark
+  // Solid canvas color used for contrast math (pickContrastFg, sidebar mix).
+  const canvasBgSolid = isDark
     ? mixHex(palette.boardBg, '#000000', 0.45)
     : palette.boardBg;
-  const sidebarBg = mixHex(palette.boardBg, '#000000', isDark ? 0.5 : 0.2);
+  // The actually-rendered canvas background — solid in normal palettes, the
+  // gradient when one is defined. Dark mode tints the gradient with a black
+  // overlay layered behind it to keep the "dusk" feel.
+  const canvasBg = palette.boardBgGradient
+    ? isDark
+      ? `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), ${palette.boardBgGradient}`
+      : palette.boardBgGradient
+    : canvasBgSolid;
+  // Sidebar surface = the accent canvas tinted slightly darker. Lower mix
+  // ratios = lighter sidebar. Tuned so it reads as "darker than canvas but
+  // not heavy" in both themes.
+  const sidebarBg = mixHex(palette.boardBg, '#000000', isDark ? 0.35 : 0.1);
   root.style.setProperty('--canvas-bg', canvasBg);
   root.style.setProperty('--canvas-bg-sidebar', sidebarBg);
 
-  const canvasFg = pickContrastFg(canvasBg);
+  // Always derive contrast from the solid canvas color — pickContrastFg
+   //expects a hex string and would choke on a gradient.
+  const canvasFg = pickContrastFg(canvasBgSolid);
   // Sidebar always uses white text — its background is darkened from the
   // accent specifically to keep this contrast in both themes.
   const sidebarFg: '#FFFFFF' = '#FFFFFF';

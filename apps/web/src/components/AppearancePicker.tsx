@@ -43,11 +43,11 @@ const CARD_SIZE_OPTIONS: ReadonlyArray<{ value: CardSize; label: string }> = [
 ];
 
 const ACCENT_OPTIONS: ReadonlyArray<{ value: Accent; label: string }> = [
-  { value: 'green', label: 'Forest' },
+  { value: 'green', label: 'Emerald' },
   { value: 'blue', label: 'Sky' },
   { value: 'purple', label: 'Violet' },
   { value: 'red', label: 'Crimson' },
-  { value: 'orange', label: 'Sunset' },
+  { value: 'orange', label: 'Tangerine' },
   { value: 'pink', label: 'Rose' },
   { value: 'teal', label: 'Lagoon' },
   { value: 'gray', label: 'Slate' },
@@ -55,6 +55,21 @@ const ACCENT_OPTIONS: ReadonlyArray<{ value: Accent; label: string }> = [
   { value: 'lime', label: 'Lime' },
   { value: 'amber', label: 'Amber' },
   { value: 'midnight', label: 'Midnight' },
+];
+
+const GRADIENT_OPTIONS: ReadonlyArray<{ value: Accent; label: string }> = [
+  { value: 'sunset', label: 'Sunset' },
+  { value: 'aurora', label: 'Aurora' },
+  { value: 'cosmic', label: 'Cosmic' },
+  { value: 'ember', label: 'Ember' },
+  { value: 'ocean', label: 'Deep ocean' },
+  { value: 'sakura', label: 'Sakura' },
+  { value: 'mint', label: 'Mint' },
+  { value: 'twilight', label: 'Twilight' },
+  { value: 'volcano', label: 'Volcano' },
+  { value: 'glacier', label: 'Glacier' },
+  { value: 'forest', label: 'Forest mist' },
+  { value: 'royal', label: 'Royal' },
 ];
 
 interface Props {
@@ -211,6 +226,14 @@ export default function AppearancePicker({
               />
             </Row>
 
+            <Row label="Gradient" hint="Painted across the board canvas.">
+              <ColorSwatches
+                value={settings.accent}
+                options={GRADIENT_OPTIONS}
+                onChange={(v) => update({ accent: v })}
+              />
+            </Row>
+
             <Row label="Animation" hint="Scale or disable transitions.">
               <Segmented
                 value={settings.motion}
@@ -336,7 +359,11 @@ function ColorSwatches({
             className={
               'kf-appearance__swatch' + (selected ? ' is-active' : '')
             }
-            style={{ background: ACCENT_PALETTES[opt.value].accent }}
+            style={{
+              background:
+                ACCENT_PALETTES[opt.value].boardBgGradient ??
+                ACCENT_PALETTES[opt.value].accent,
+            }}
             onClick={() => onChange(opt.value)}
           />
         );
