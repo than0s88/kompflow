@@ -1,9 +1,10 @@
 import type { Board, CreateBoardDto } from '@kanban/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../lib/api';
+import { setStoredPassphrase } from '../lib/board-key';
 import '../styles/app.css';
 
 interface BoardListResponse {
@@ -40,6 +41,7 @@ function colorFor(seed: string): string {
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ['boards'],
@@ -58,16 +60,49 @@ export default function Dashboard() {
 
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState('');
+  const [encrypt, setEncrypt] = useState(false);
+  const [passphrase, setPassphrase] = useState('');
+  const [passphraseConfirm, setPassphraseConfirm] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setTitle('');
+    setEncrypt(false);
+    setPassphrase('');
+    setPassphraseConfirm('');
+    setFormError(null);
+    setCreating(false);
+  };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     if (!title.trim()) return;
+    if (encrypt) {
+      if (!passphrase) {
+        setFormError('Enter a passphrase to enable encryption.');
+        return;
+      }
+      if (passphrase !== passphraseConfirm) {
+        setFormError('Passphrases do not match.');
+        return;
+      }
+    }
+    const wasEncrypted = encrypt;
+    const enteredPassphrase = passphrase;
     createMutation.mutate(
-      { title: title.trim() },
+      { title: title.trim(), encrypted: wasEncrypted },
       {
-        onSuccess: () => {
-          setTitle('');
-          setCreating(false);
+        onSuccess: (board) => {
+          if (wasEncrypted) {
+            // Stash the passphrase so BoardView can derive the key on mount.
+            setStoredPassphrase(board.id, enteredPassphrase);
+          }
+          const targetId = board.id;
+          resetForm();
+          if (wasEncrypted) {
+            navigate(`/boards/${targetId}`);
+          }
         },
       },
     );
@@ -155,28 +190,90 @@ export default function Dashboard() {
                 style={{
                   marginBottom: 18,
                   display: 'flex',
-                  gap: 8,
+                  flexDirection: 'column',
+                  gap: 10,
                   background: 'var(--bg-app)',
-                  padding: 12,
+                  padding: 14,
                   borderRadius: 'var(--r-lane)',
                   boxShadow: 'var(--shadow-card)',
                 }}
               >
-                <input
-                  autoFocus
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Board title"
-                  className="auth-input"
-                  style={{ flex: 1 }}
-                />
-                <button
-                  type="submit"
-                  disabled={createMutation.isPending}
-                  className="btn-primary"
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    autoFocus
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Board title"
+                    className="auth-input"
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={createMutation.isPending}
+                    className="btn-primary"
+                  >
+                    Create
+                  </button>
+                </div>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontSize: 13,
+                    color: 'var(--fg-2)',
+                    cursor: 'pointer',
+                  }}
                 >
-                  Create
-                </button>
+                  <input
+                    type="checkbox"
+                    checked={encrypt}
+                    onChange={(e) => setEncrypt(e.target.checked)}
+                  />
+                  Make this board end-to-end encrypted
+                </label>
+                {encrypt && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                      paddingLeft: 24,
+                    }}
+                  >
+                    <input
+                      type="password"
+                      value={passphrase}
+                      onChange={(e) => setPassphrase(e.target.value)}
+                      placeholder="Passphrase"
+                      className="auth-input"
+                      autoComplete="new-password"
+                    />
+                    <input
+                      type="password"
+                      value={passphraseConfirm}
+                      onChange={(e) => setPassphraseConfirm(e.target.value)}
+                      placeholder="Confirm passphrase"
+                      className="auth-input"
+                      autoComplete="new-password"
+                    />
+                    <p
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--fg-3)',
+                        margin: 0,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      Card descriptions are encrypted in your browser before
+                      they reach the server. Lose the passphrase and the data
+                      is unrecoverable — share it with members out-of-band.
+                    </p>
+                  </div>
+                )}
+                {formError && (
+                  <div className="auth-error">{formError}</div>
+                )}
               </form>
             )}
 

@@ -18,9 +18,10 @@ interface Props {
   card: Card;
   boardId: string;
   dragging?: boolean;
+  onOpen?: (cardId: string) => void;
 }
 
-export default function KanbanCard({ card, boardId, dragging = false }: Props) {
+export default function KanbanCard({ card, boardId, dragging = false, onOpen }: Props) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(card.title);
@@ -136,6 +137,15 @@ export default function KanbanCard({ card, boardId, dragging = false }: Props) {
       {...(dragging ? {} : sortable.attributes)}
       {...(dragging ? {} : sortable.listeners)}
       className={'card' + dragClass}
+      onClick={
+        dragging || sortable.isDragging
+          ? undefined
+          : (e) => {
+              // Don't open the modal if a child (edit/delete button) handled the click.
+              if (e.defaultPrevented) return;
+              onOpen?.(card.id);
+            }
+      }
     >
       <div className="card-title">{card.title}</div>
       {!dragging && (

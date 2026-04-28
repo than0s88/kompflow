@@ -38,6 +38,7 @@ export class BoardsService {
         ownerId: userId,
         title: dto.title,
         description: dto.description,
+        encrypted: dto.encrypted ?? false,
         position: (max._max.position ?? 0) + 1024,
         members: {
           create: { userId, role: 'owner' },

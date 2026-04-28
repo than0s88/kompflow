@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateBoardDto {
   @IsString()
@@ -9,4 +9,8 @@ export class CreateBoardDto {
   @IsString()
   @MaxLength(2000)
   description?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  encrypted?: boolean;
 }

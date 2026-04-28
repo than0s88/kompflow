@@ -24,9 +24,10 @@ import '../../styles/app.css';
 interface Props {
   column: Column;
   boardId: string;
+  onOpenCard?: (cardId: string) => void;
 }
 
-export default function KanbanColumn({ column, boardId }: Props) {
+export default function KanbanColumn({ column, boardId, onOpenCard }: Props) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(column.title);
@@ -217,7 +218,12 @@ export default function KanbanColumn({ column, boardId }: Props) {
       >
         <div ref={setDroppableRef} className="lane-cards">
           {column.cards.map((card) => (
-            <KanbanCard key={card.id} card={card} boardId={boardId} />
+            <KanbanCard
+              key={card.id}
+              card={card}
+              boardId={boardId}
+              onOpen={onOpenCard}
+            />
           ))}
         </div>
       </SortableContext>

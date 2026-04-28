@@ -1,6 +1,7 @@
 import './../styles/home.css';
 import { Link } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../auth/AuthContext';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -70,6 +71,12 @@ function renderHeadlineHtml(value: string): string {
 }
 
 export default function Home() {
+  const { user } = useAuth();
+  const ctaTarget = user ? '/dashboard' : '/register';
+  const signInTarget = user ? '/dashboard' : '/login';
+  const ctaLabel = user ? 'Open dashboard' : 'Try free';
+  const signInLabel = user ? 'Dashboard' : 'Sign in';
+
   const [tweaksOpen, setTweaksOpen] = useState<boolean>(false);
   const [theme, setTheme] = useState<ThemeMode>('light');
   const [accentIdx, setAccentIdx] = useState<number>(0);
@@ -324,8 +331,8 @@ export default function Home() {
           </nav>
           <div className="nav-spacer"></div>
           <div className="nav-cta">
-            <Link to="/login" className="btn btn-ghost">Sign in</Link>
-            <Link to="/register" className="btn btn-primary">Try free</Link>
+            <Link to={signInTarget} className="btn btn-ghost">{signInLabel}</Link>
+            <Link to={ctaTarget} className="btn btn-primary">{ctaLabel}</Link>
           </div>
         </div>
       </header>
@@ -342,7 +349,7 @@ export default function Home() {
             />
             <p className="hero-sub">Kompflow is a beautifully simple project board with real-time sync, end-to-end encrypted cards, and the kind of micro-interactions that make work feel less like work.</p>
             <div className="hero-cta">
-              <Link to="/register" className="btn btn-primary btn-lg">
+              <Link to={ctaTarget} className="btn btn-primary btn-lg">
                 Start free
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
               </Link>
@@ -662,7 +669,7 @@ export default function Home() {
                 <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Dark mode</li>
               </ul>
               <div className="price-cta">
-                <Link to="/register" className="btn btn-outline">Start free</Link>
+                <Link to={ctaTarget} className="btn btn-outline">{user ? 'Open dashboard' : 'Start free'}</Link>
               </div>
             </div>
 
@@ -678,7 +685,7 @@ export default function Home() {
                 <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12l5 5L20 7"/></svg> Priority support</li>
               </ul>
               <div className="price-cta">
-                <Link to="/register" className="btn btn-primary">Try Pro free for 14 days</Link>
+                <Link to={ctaTarget} className="btn btn-primary">{user ? 'Open dashboard' : 'Try Pro free for 14 days'}</Link>
               </div>
             </div>
 
@@ -736,7 +743,7 @@ export default function Home() {
             <h2 className="final-cta-title">Ready to move some cards?</h2>
             <p className="final-cta-sub">Free for up to 10 users. No credit card. No sales call. Just sign up.</p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link to="/register" className="btn btn-primary btn-lg">
+              <Link to={ctaTarget} className="btn btn-primary btn-lg">
                 Start free
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
               </Link>

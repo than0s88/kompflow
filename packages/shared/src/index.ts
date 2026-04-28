@@ -33,6 +33,7 @@ export interface Board {
   title: string;
   description: string | null;
   position: number;
+  encrypted: boolean;
   columns?: Column[];
   createdAt: string;
   updatedAt: string;
@@ -64,6 +65,7 @@ export interface LoginDto {
 export interface CreateBoardDto {
   title: string;
   description?: string;
+  encrypted?: boolean;
 }
 
 export interface UpdateBoardDto {

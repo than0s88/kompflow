@@ -26,9 +26,16 @@ import {
 import { Link, useParams } from 'react-router-dom';
 import AddColumn from '../components/Kanban/AddColumn';
 import KanbanCard from '../components/Kanban/Card';
+import CardModal from '../components/Kanban/CardModal';
 import KanbanColumn from '../components/Kanban/Column';
+import PassphraseGate from '../components/Kanban/PassphraseGate';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../lib/api';
+import {
+  clearStoredPassphrase,
+  getStoredPassphrase,
+} from '../lib/board-key';
+import { deriveKey } from '../lib/crypto';
 import { getPusher } from '../lib/pusher';
 import '../styles/app.css';
 
@@ -75,6 +82,9 @@ export default function BoardView() {
   const [active, setActive] = useState<ActiveItem>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const [titleDraft, setTitleDraft] = useState('');
+  const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
+  const [keyAttempted, setKeyAttempted] = useState(false);
 
   useEffect(() => {
     if (board?.columns) setColumns(board.columns);
@@ -83,6 +93,38 @@ export default function BoardView() {
   useEffect(() => {
     if (board?.title) setTitleDraft(board.title);
   }, [board?.title]);
+
+  // For encrypted boards, derive the key from a stashed passphrase if present.
+  // If no passphrase is stashed, the gate renders below and prompts for it.
+  useEffect(() => {
+    if (!board) return;
+    if (!board.encrypted) {
+      setEncryptionKey(null);
+      setKeyAttempted(true);
+      return;
+    }
+    setKeyAttempted(false);
+    const stored = getStoredPassphrase(board.id);
+    if (!stored) {
+      setEncryptionKey(null);
+      setKeyAttempted(true);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const key = await deriveKey(stored, board.id);
+        if (!cancelled) setEncryptionKey(key);
+      } catch {
+        if (!cancelled) clearStoredPassphrase(board.id);
+      } finally {
+        if (!cancelled) setKeyAttempted(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [board]);
 
   // Real-time: refetch when other users update the board
   useEffect(() => {
@@ -270,6 +312,19 @@ export default function BoardView() {
   const userInitials = user ? initialsFor(user.name) : '?';
   const userColor = user ? colorFor(user.id) : AVATAR_PALETTE[0];
 
+  // Locate the currently-open card from the live columns state so updates re-render.
+  const openCardCtx = (() => {
+    if (!openCardId) return null;
+    for (const col of columns) {
+      const found = col.cards.find((c) => c.id === openCardId);
+      if (found) return { card: found, column: col };
+    }
+    return null;
+  })();
+
+  const needsPassphrase =
+    !!board.encrypted && keyAttempted && !encryptionKey;
+
   return (
     <div className="app">
       <header className="topbar">
@@ -317,30 +372,64 @@ export default function BoardView() {
         </button>
       </header>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className={'board' + (active ? ' is-dragging' : '')}>
-          <SortableContext
-            items={columns.map((c) => `column-${c.id}`)}
-            strategy={horizontalListSortingStrategy}
-          >
-            {columns.map((column) => (
-              <KanbanColumn key={column.id} column={column} boardId={board.id} />
-            ))}
-          </SortableContext>
-          <AddColumn boardId={board.id} />
-        </div>
+      {!needsPassphrase && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className={'board' + (active ? ' is-dragging' : '')}>
+            <SortableContext
+              items={columns.map((c) => `column-${c.id}`)}
+              strategy={horizontalListSortingStrategy}
+            >
+              {columns.map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  boardId={board.id}
+                  onOpenCard={setOpenCardId}
+                />
+              ))}
+            </SortableContext>
+            <AddColumn boardId={board.id} />
+          </div>
 
-        <DragOverlay>
-          {active?.type === 'card' ? (
-            <KanbanCard card={active.card} boardId={board.id} dragging />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay>
+            {active?.type === 'card' ? (
+              <KanbanCard card={active.card} boardId={board.id} dragging />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {openCardCtx && !needsPassphrase && (
+        <CardModal
+          card={openCardCtx.card}
+          boardId={board.id}
+          columnTitle={openCardCtx.column.title}
+          encryptionKey={encryptionKey}
+          onClose={() => setOpenCardId(null)}
+          onRequestPassphraseReset={() => {
+            clearStoredPassphrase(board.id);
+            setEncryptionKey(null);
+            setKeyAttempted(true);
+            setOpenCardId(null);
+          }}
+        />
+      )}
+
+      {needsPassphrase && (
+        <PassphraseGate
+          boardId={board.id}
+          boardTitle={board.title}
+          onUnlock={(key) => {
+            setEncryptionKey(key);
+            setKeyAttempted(true);
+          }}
+        />
+      )}
     </div>
   );
 }
