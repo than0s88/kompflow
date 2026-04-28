@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(cuid())
+  name          String
+  email         String        @unique
+  passwordHash  String?       @map("password_hash")
+  googleId      String?       @unique @map("google_id")
+  microsoftId   String?       @unique @map("microsoft_id")
+  avatarUrl     String?       @map("avatar_url")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  ownedBoards   Board[]       @relation("BoardOwner")
+  memberships   BoardMember[]
+
+  @@map("users")
+}
+
+model Board {
+  id          String         @id @default(cuid())
+  ownerId     String         @map("owner_id")
+  title       String
+  description String?
+  position    Int            @default(0)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  owner       User           @relation("BoardOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  columns     Column[]
+  members     BoardMember[]
+
+  @@index([ownerId, position])
+  @@map("boards")
+}
+
+model BoardMember {
+  id        String   @id @default(cuid())
+  boardId   String   @map("board_id")
+  userId    String   @map("user_id")
+  role      String   @default("viewer") // owner | editor | viewer
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, userId])
+  @@index([userId])
+  @@map("board_members")
+}
+
+model Column {
+  id        String   @id @default(cuid())
+  boardId   String   @map("board_id")
+  title     String
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  cards Card[]
+
+  @@index([boardId, position])
+  @@map("columns")
+}
+
+model Card {
+  id          String   @id @default(cuid())
+  columnId    String   @map("column_id")
+  title       String
+  description String?
+  position    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  column Column @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@index([columnId, position])
+  @@map("cards")
+}
