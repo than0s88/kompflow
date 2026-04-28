@@ -35,7 +35,11 @@ EXPOSE 3001
 
 # Inline boot sequence:
 #   1. Apply Prisma schema with db push (idempotent — re-running is safe).
-#   2. Launch the NestJS server.
+#   2. Run the demo seeder (idempotent for users + workspace; replaces demo
+#      boards each boot so reviewers always see a freshly-populated state).
+#      Failures are tolerated (`|| true`) so an already-seeded DB or transient
+#      error never blocks the API from starting.
+#   3. Launch the NestJS server.
 # Inlined here instead of using a shell script so Windows hosts don't trip on
 # CRLF line endings in a checked-in *.sh file.
-CMD ["sh", "-c", "echo '[api] applying database schema...' && pnpm exec prisma db push --skip-generate --accept-data-loss && echo '[api] starting NestJS...' && exec node dist/main"]
+CMD ["sh", "-c", "echo '[api] applying database schema...' && pnpm exec prisma db push --skip-generate --accept-data-loss && echo '[api] seeding demo data...' && (pnpm exec prisma db seed || echo '[api] seed skipped/failed — continuing') && echo '[api] starting NestJS...' && exec node dist/main"]

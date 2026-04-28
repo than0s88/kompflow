@@ -21,6 +21,46 @@ When build finishes, open:
 - **App:** http://localhost:5173
 - **API:** http://localhost:3001/api (returns 404 directly — that's normal; auth-protected routes live under it)
 
+### Demo data is auto-loaded
+
+The API container auto-runs the demo seeder on every boot, right after applying the Prisma schema. By the time the web app is reachable, the database already contains:
+
+- Two test accounts (see below)
+- One shared workspace (`Alex's Workspace`) with both accounts as members
+- Three pre-populated boards: **Q3 Product Launch**, **Engineering — Sprint 24**, **Marketing — Spring Campaign** — each with realistic cards (covers, labels, due dates, member assignments) and a week of fake activity history so the timeline isn't empty
+
+The seed is **idempotent** — re-running it refreshes the demo data in place. To re-seed manually any time:
+
+```bash
+docker compose exec api pnpm --filter @kanban/api db:seed
+```
+
+### Demo accounts
+
+| Role             | Email                       | Password    | Display name |
+| ---------------- | --------------------------- | ----------- | ------------ |
+| Workspace owner  | `testadmin@kompflow.com`    | `Pa$$w0rd!` | Alex Mercer  |
+| Invited member   | `testuser@kompflow.com`     | `Pa$$w0rd!` | Taylor Quinn |
+
+Both accounts share the same workspace (`Alex's Workspace`). Sign in at http://localhost:5173/login.
+
+### Test realtime updates with two accounts
+
+Open the app in **two different browser windows** (or one normal + one incognito) and sign in as each account. As one account drags cards, edits descriptions, or adds members, the other window's board view, sidebar, and activity feed update **live** through the self-hosted Soketi WebSocket — no refresh required. This is the cleanest way to see the full multi-user kanban experience the demo is built around.
+
+### Test the invitation-by-email flow
+
+While signed in as **Alex** (workspace owner):
+
+1. Open the workspace page → **Members** panel.
+2. Type any email address (e.g. `your-other-gmail@gmail.com`) → click **Send invite**.
+3. The API sends a real email through the bundled Gmail SMTP credentials. The invitee receives a "You're invited to Alex's Workspace" message with a tokenized accept link.
+4. Click the link → it opens `/invite/<token>` → the new user signs up (or signs in) → they're added to the workspace and an `invited` / `joined` activity row appears in the live feed for everyone watching.
+
+If outbound email is blocked on your network, the invitation row is still visible in the workspace's pending-invitations list, and the accept URL is logged to `docker compose logs api`.
+
+### Other commands
+
 To stop the stack: `Ctrl+C`. To wipe the database between runs: `docker compose down -v`.
 
 ---
